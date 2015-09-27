@@ -1,0 +1,16 @@
+<package>
+  <description brief="Smoothing and Mapping library">
+  Georgia Tech Smoothing and Mapping
+  </description>
+  <author>THANKS-FILE</author>
+  <license>BSD</license>
+  <url>https://collab.cc.gatech.edu/borg/gtsam/</url>
+  <depend package="base/cmake" />
+  <!--
+   To add any dependencies use the depend tag
+  <depend package="dummy-dependency-0" />
+	...
+  <depend package="dummy-dependency-n-1" />
+  <depend package="dummy-dependency-n" />
+  -->
+</package>
