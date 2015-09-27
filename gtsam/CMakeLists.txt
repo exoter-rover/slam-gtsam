@@ -137,3 +137,18 @@ if (GTSAM_INSTALL_MATLAB_TOOLBOX)
     # FIXME: issue with dependency between wrap_gtsam and wrap_gtsam_build, only shows up on CMake 2.8.3
     wrap_library(gtsam "${mexFlags}" "../" "")
 endif ()
+
+set(DEPS_PKGCONFIG "${DEPS_PKGCONFIG} gtsam")
+set(PKGCONFIG_REQUIRES ${gtsam_PKGCONFIG_REQUIRES})
+set(PKGCONFIG_CFLAGS ${gtsam_PKGCONFIG_CFLAGS})
+set(PKGCONFIG_LIBS ${gtsam_PKGCONFIG_LIBS})
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/gtsam.pc.in)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/gtsam.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/gtsam.pc @ONLY)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gtsam.pc
+    DESTINATION lib/pkgconfig)
+else()
+    message("pkg-config: ${CMAKE_CURRENT_SOURCE_DIR}/gtsam.pc.in is not available for configuration")
+endif()
+
