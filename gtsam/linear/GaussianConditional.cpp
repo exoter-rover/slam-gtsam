@@ -20,6 +20,7 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
 
+#include <gtsam/base/types.h>
 #include <gtsam/linear/linearExceptions.h>
 #include <gtsam/linear/GaussianConditional.h>
 #include <gtsam/linear/GaussianFactor.h>
@@ -193,7 +194,7 @@ void GaussianConditional::solveInPlace(VectorValues& x) const {
 	Vector soln = this->get_R().triangularView<Eigen::Upper>().solve(xS);
 
 	// Check for indeterminant solution
-	if(soln.unaryExpr(!boost::lambda::bind(ptr_fun(isfinite<double>), boost::lambda::_1)).any())
+	if(soln.unaryExpr(!boost::lambda::bind(std::ptr_fun(boost::math::isfinite<double>), boost::lambda::_1)).any())
 		throw IndeterminantLinearSystemException(this->keys().front());
 
 	if(debug) {
@@ -209,7 +210,7 @@ void GaussianConditional::solveTransposeInPlace(VectorValues& gy) const {
 	frontalVec = gtsam::backSubstituteUpper(frontalVec,Matrix(get_R()));
 
 	// Check for indeterminant solution
-	if(frontalVec.unaryExpr(!boost::lambda::bind(ptr_fun(isfinite<double>), boost::lambda::_1)).any())
+	if(frontalVec.unaryExpr(!boost::lambda::bind(std::ptr_fun(boost::math::isfinite<double>), boost::lambda::_1)).any())
 		throw IndeterminantLinearSystemException(this->keys().front());
 
 	GaussianConditional::const_iterator it;

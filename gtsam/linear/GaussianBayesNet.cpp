@@ -234,7 +234,7 @@ double determinant(const GaussianBayesNet& bayesNet) {
 	double logDet = 0.0;
 
 	BOOST_FOREACH(boost::shared_ptr<const GaussianConditional> cg, bayesNet){
-		logDet += cg->get_R().diagonal().unaryExpr(ptr_fun<double,double>(log)).sum();
+		logDet += cg->get_R().diagonal().unaryExpr(std::ptr_fun<double,double>(log)).sum();
 	}
 
 	return exp(logDet);

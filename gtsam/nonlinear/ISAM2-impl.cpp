@@ -282,7 +282,7 @@ void ISAM2::Impl::ExpmapMasked(Values& values, const VectorValues& delta, const 
         cout << "       " << keyFormatter(key_value->key) << " (j = " << var << "), delta = " << delta[var].transpose() << endl;
     }
     assert(delta[var].size() == (int)key_value->value.dim());
-    assert(delta[var].unaryExpr(ptr_fun(isfinite<double>)).all());
+    assert(delta[var].unaryExpr(std::ptr_fun(boost::math::isfinite<double>)).all());
     if(mask[var]) {
       Value* retracted = key_value->value.retract_(delta[var]);
       key_value->value = *retracted;
@@ -426,7 +426,7 @@ size_t ISAM2::Impl::UpdateDelta(const boost::shared_ptr<ISAM2Clique>& root, std:
 
 #ifndef NDEBUG
     for(size_t j=0; j<delta.size(); ++j)
-      assert(delta[j].unaryExpr(ptr_fun(isfinite<double>)).all());
+      assert(delta[j].unaryExpr(std::ptr_fun(boost::math::isfinite<double>)).all());
 #endif
   }
 

@@ -22,6 +22,7 @@
 #include <cstddef>
 
 #include <string>
+#include <cmath>
 #include <boost/function/function1.hpp>
 
 namespace gtsam {

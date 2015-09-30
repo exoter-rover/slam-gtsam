@@ -270,9 +270,9 @@ double Constrained::distance(const Vector& v) const {
 	Vector w = Diagonal::whiten(v); // get noisemodel for constrained elements
 	// TODO Find a better way of doing these checks
 	for (size_t i=0; i<dim_; ++i) { // add mu weights on constrained variables
-		if (isinf(w[i])) // whiten makes constrained variables infinite
+		if (std::isinf(w[i])) // whiten makes constrained variables infinite
 			w[i] = v[i] * sqrt(mu_[i]); // TODO: may want to store sqrt rather than rebuild
-		if (isnan(w[i])) // ensure no other invalid values make it through
+		if (std::isnan(w[i])) // ensure no other invalid values make it through
 			w[i] = v[i];
 	}
 	return w.dot(w);

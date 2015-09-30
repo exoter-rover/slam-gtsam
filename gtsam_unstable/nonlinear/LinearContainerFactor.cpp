@@ -190,7 +190,7 @@ GaussianFactor::shared_ptr LinearContainerFactor::linearize(
 
 /* ************************************************************************* */
 bool LinearContainerFactor::isJacobian() const {
-	return boost::dynamic_pointer_cast<JacobianFactor>(factor_);
+	return boost::dynamic_pointer_cast<JacobianFactor>(factor_) != 0;
 }
 
 /* ************************************************************************* */
