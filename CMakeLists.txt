@@ -2,6 +2,8 @@
 project(GTSAM CXX C)
 cmake_minimum_required(VERSION 2.6)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 # Set the version number for the library
 set (GTSAM_VERSION_MAJOR 2)
 set (GTSAM_VERSION_MINOR 1)
