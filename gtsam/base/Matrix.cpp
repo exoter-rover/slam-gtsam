@@ -21,8 +21,8 @@
 #include <gtsam/base/Vector.h>
 #include <gtsam/base/FastList.h>
 
-#include <gtsam/3rdparty/Eigen/Eigen/Dense>
-#include <gtsam/3rdparty/Eigen/Eigen/SVD>
+#include <Eigen/Dense>
+#include <Eigen/SVD>
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>

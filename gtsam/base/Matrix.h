@@ -23,7 +23,7 @@
 #pragma once
 
 #include <gtsam/base/Vector.h>
-#include <gtsam/3rdparty/Eigen/Eigen/QR>
+#include <Eigen/QR>
 #include <boost/format.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/math/special_functions/fpclassify.hpp>
@@ -322,7 +322,7 @@ void inplace_QR(MATRIX& A) {
 	HCoeffsType hCoeffs(size);
 	RowVectorType temp(cols);
 
-	Eigen::internal::householder_qr_inplace_blocked(A, hCoeffs, 48, temp.data());
+	Eigen::internal::householder_qr_inplace_blocked<MATRIX, HCoeffsType>::run(A, hCoeffs, 48, temp.data());
 
 	zeroBelowDiagonal(A);
 }

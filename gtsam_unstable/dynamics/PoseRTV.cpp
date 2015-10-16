@@ -3,7 +3,7 @@
  * @author Alex Cunningham
  */
 
-#include <gtsam/3rdparty/Eigen/Eigen/LU>
+#include <Eigen/LU>
 
 #include <gtsam/base/numericalDerivative.h>
 #include <gtsam/base/Vector.h>

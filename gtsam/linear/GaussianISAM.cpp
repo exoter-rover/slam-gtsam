@@ -15,7 +15,7 @@
  * @author  Michael Kaess
  */
 
-#include <gtsam/3rdparty/Eigen/Eigen/Dense>
+#include <Eigen/Dense>
 #include <gtsam/linear/GaussianISAM.h>
 #include <gtsam/linear/GaussianBayesTree.h>
 

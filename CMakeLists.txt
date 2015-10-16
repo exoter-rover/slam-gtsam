@@ -1,6 +1,8 @@
 
 project(GTSAM CXX C)
 cmake_minimum_required(VERSION 2.6)
+find_package(Rock)
+rock_init(gtsam 2.1.0)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
@@ -14,6 +16,9 @@ set (GTSAM_VERSION_PATCH 0)
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(GtsamMakeConfigFile)
+
+# Look for EIGEN3
+rock_find_pkgconfig(Eigen3 eigen3 REQUIRED)
 
 # Record the root dir for gtsam - needed during external builds, e.g., ROS
 set(GTSAM_SOURCE_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})

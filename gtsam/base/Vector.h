@@ -24,7 +24,7 @@
 #include <vector>
 #include <iostream>
 #include <gtsam/base/types.h>
-#include <gtsam/3rdparty/Eigen/Eigen/Dense>
+#include <Eigen/Dense>
 
 namespace gtsam {
 

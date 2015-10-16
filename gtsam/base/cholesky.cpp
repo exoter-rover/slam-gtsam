@@ -20,8 +20,8 @@
 #include <gtsam/base/cholesky.h>
 #include <gtsam/base/timing.h>
 
-#include <gtsam/3rdparty/Eigen/Eigen/Core>
-#include <gtsam/3rdparty/Eigen/Eigen/Dense>
+#include <Eigen/Core>
+#include <Eigen/Dense>
 
 #include <boost/format.hpp>
 #include <cmath>
