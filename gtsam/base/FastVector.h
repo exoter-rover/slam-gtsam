@@ -18,13 +18,10 @@
 
 #pragma once
 
-#include <vector>
-#include <boost/pool/pool_alloc.hpp>
+#include <gtsam/base/FastDefaultAllocator.h>
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/vector.hpp>
-
-#include <gtsam/base/FastList.h>
-#include <gtsam/base/FastSet.h>
+#include <vector>
 
 namespace gtsam {
 
@@ -36,20 +33,27 @@ namespace gtsam {
  * @addtogroup base
  */
 template<typename VALUE>
-class FastVector: public std::vector<VALUE, boost::pool_allocator<VALUE> > {
+class FastVector: public std::vector<VALUE,
+    typename internal::FastDefaultVectorAllocator<VALUE>::type> {
 
 public:
 
-  typedef std::vector<VALUE, boost::pool_allocator<VALUE> > Base;
+  typedef std::vector<VALUE,
+      typename internal::FastDefaultVectorAllocator<VALUE>::type> Base;
 
   /** Default constructor */
-  FastVector() {}
+  FastVector() {
+  }
 
   /** Constructor from size */
-  explicit FastVector(size_t size) : Base(size) {}
+  explicit FastVector(size_t size) :
+      Base(size) {
+  }
 
   /** Constructor from size and initial values */
-  explicit FastVector(size_t size, const VALUE& initial) : Base(size, initial) {}
+  explicit FastVector(size_t size, const VALUE& initial) :
+      Base(size, initial) {
+  }
 
   /** Constructor from a range, passes through to base class */
   template<typename INPUTITERATOR>
@@ -57,47 +61,35 @@ public:
     // This if statement works around a bug in boost pool allocator and/or
     // STL vector where if the size is zero, the pool allocator will allocate
     // huge amounts of memory.
-    if(first != last)
+    if (first != last)
       Base::assign(first, last);
   }
 
-  /** Copy constructor from another FastVector */
-  FastVector(const FastVector<VALUE>& x) : Base(x) {}
-
-  /** Copy constructor from a FastList */
-  FastVector(const FastList<VALUE>& x) {
-    if(x.size() > 0)
-      Base::assign(x.begin(), x.end());
-  }
-
-  /** Copy constructor from a FastSet */
-  FastVector(const FastSet<VALUE>& x) {
-    if(x.size() > 0)
-      Base::assign(x.begin(), x.end());
-  }
-
   /** Copy constructor from the base class */
-  FastVector(const Base& x) : Base(x) {}
+  FastVector(const Base& x) :
+      Base(x) {
+  }
 
   /** Copy constructor from a standard STL container */
-  FastVector(const std::vector<VALUE>& x) {
+  template<typename ALLOCATOR>
+  FastVector(const std::vector<VALUE, ALLOCATOR>& x) {
     // This if statement works around a bug in boost pool allocator and/or
     // STL vector where if the size is zero, the pool allocator will allocate
     // huge amounts of memory.
-    if(x.size() > 0)
+    if (x.size() > 0)
       Base::assign(x.begin(), x.end());
   }
 
-	/** Conversion to a standard STL container */
-	operator std::vector<VALUE>() const {
-		return std::vector<VALUE>(this->begin(), this->end());
-	}
+  /** Conversion to a standard STL container */
+  operator std::vector<VALUE>() const {
+    return std::vector<VALUE>(this->begin(), this->end());
+  }
 
 private:
   /** Serialization function */
   friend class boost::serialization::access;
   template<class ARCHIVE>
-  void serialize(ARCHIVE & ar, const unsigned int version) {
+  void serialize(ARCHIVE & ar, const unsigned int /*version*/) {
     ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Base);
   }
 

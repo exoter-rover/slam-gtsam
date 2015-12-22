@@ -19,49 +19,61 @@
 
 #pragma once
 
-#include <gtsam/linear/VectorValues.h>
+#include <gtsam/base/FastList.h>
+#include <gtsam/base/Vector.h>
+#include <gtsam/base/Testable.h>
+
+#include <string>
 
 namespace gtsam {
-	
+
+  // Forward declarations
+  class VectorValues;
+
   /** vector of errors */
-  class Errors : public std::list<Vector> {
+  class Errors : public FastList<Vector> {
 
   public:
 
-    Errors() ;
+    GTSAM_EXPORT Errors() ;
 
-	/** break V into pieces according to its start indices */
-	Errors(const VectorValues &V) ;
+    /** break V into pieces according to its start indices */
+    GTSAM_EXPORT Errors(const VectorValues&V);
 
-  	/** print */
-    void print(const std::string& s = "Errors") const;
+    /** print */
+    GTSAM_EXPORT void print(const std::string& s = "Errors") const;
 
     /** equals, for unit testing */
-    bool equals(const Errors& expected, double tol=1e-9) const;
+    GTSAM_EXPORT bool equals(const Errors& expected, double tol=1e-9) const;
 
     /** Addition */
-    Errors operator+(const Errors& b) const;
+    GTSAM_EXPORT Errors operator+(const Errors& b) const;
 
     /** subtraction */
-    Errors operator-(const Errors& b) const;
+    GTSAM_EXPORT Errors operator-(const Errors& b) const;
 
     /** negation */
-    Errors operator-() const ;
+    GTSAM_EXPORT Errors operator-() const ;
 
   }; // Errors
 
   /**
-   * dot product
-   */
-  double dot(const Errors& a, const Errors& b);
+  * dot product
+  */
+  GTSAM_EXPORT double dot(const Errors& a, const Errors& b);
 
   /**
-   * BLAS level 2 style
-   */
+  * BLAS level 2 style
+  */
   template <>
-  void axpy<Errors,Errors>(double alpha, const Errors& x, Errors& y);
+  GTSAM_EXPORT void axpy<Errors,Errors>(double alpha, const Errors& x, Errors& y);
 
   /** print with optional string */
-  void print(const Errors& a, const std::string& s = "Error");
+  GTSAM_EXPORT void print(const Errors& a, const std::string& s = "Error");
 
-} // gtsam
+  /// traits
+  template<>
+  struct traits<Errors> : public Testable<Errors> {
+  };
+
+} //\ namespace gtsam

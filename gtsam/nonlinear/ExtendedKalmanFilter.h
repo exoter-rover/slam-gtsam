@@ -24,70 +24,75 @@
 
 namespace gtsam {
 
-	/**
-	 * This is a generic Extended Kalman Filter class implemented using nonlinear factors. GTSAM
-	 * basically does SRIF with Cholesky to solve the filter problem, making this an efficient, numerically
-	 * stable Kalman Filter implementation.
-	 *
-	 * The Kalman Filter relies on two models: a motion model that predicts the next state using
-	 * the current state, and a measurement model that predicts the measurement value at a given
-	 * state. Because these two models are situation-dependent, base classes for each have been
-	 * provided above, from which the user must derive a class and incorporate the actual modeling
-	 * equations.
-	 *
-	 * The class provides a "predict" and "update" function to perform these steps independently.
-	 * TODO: a "predictAndUpdate" that combines both steps for some computational savings.
-	 * \nosubgrouping
-	 */
+  /**
+   * This is a generic Extended Kalman Filter class implemented using nonlinear factors. GTSAM
+   * basically does SRIF with Cholesky to solve the filter problem, making this an efficient, numerically
+   * stable Kalman Filter implementation.
+   *
+   * The Kalman Filter relies on two models: a motion model that predicts the next state using
+   * the current state, and a measurement model that predicts the measurement value at a given
+   * state. Because these two models are situation-dependent, base classes for each have been
+   * provided above, from which the user must derive a class and incorporate the actual modeling
+   * equations.
+   *
+   * The class provides a "predict" and "update" function to perform these steps independently.
+   * TODO: a "predictAndUpdate" that combines both steps for some computational savings.
+   * \nosubgrouping
+   */
 
-	template<class VALUE>
-	class ExtendedKalmanFilter {
-	public:
+  template<class VALUE>
+  class ExtendedKalmanFilter {
 
-		typedef boost::shared_ptr<ExtendedKalmanFilter<VALUE> > shared_ptr;
-		typedef VALUE T;
-		typedef NoiseModelFactor2<VALUE, VALUE> MotionFactor;
-		typedef NoiseModelFactor1<VALUE> MeasurementFactor;
+    // Check that VALUE type is a testable Manifold
+    BOOST_CONCEPT_ASSERT((IsTestable<VALUE>));
+    BOOST_CONCEPT_ASSERT((IsManifold<VALUE>));
 
-	protected:
-		T x_; // linearization point
-		JacobianFactor::shared_ptr priorFactor_; // density
+  public:
 
-		T solve_(const GaussianFactorGraph& linearFactorGraph,
-				const Ordering& ordering, const Values& linearizationPoints,
-				Key x, JacobianFactor::shared_ptr& newPrior) const;
+    typedef boost::shared_ptr<ExtendedKalmanFilter<VALUE> > shared_ptr;
+    typedef VALUE T;
+    typedef NoiseModelFactor2<VALUE, VALUE> MotionFactor;
+    typedef NoiseModelFactor1<VALUE> MeasurementFactor;
 
-	public:
+  protected:
+    T x_; // linearization point
+    JacobianFactor::shared_ptr priorFactor_; // density
 
-		/// @name Standard Constructors
-		/// @{
+    T solve_(const GaussianFactorGraph& linearFactorGraph,
+        const Values& linearizationPoints,
+        Key x, JacobianFactor::shared_ptr& newPrior) const;
 
-		ExtendedKalmanFilter(T x_initial,
-				noiseModel::Gaussian::shared_ptr P_initial);
+  public:
 
-		/// @}
-		/// @name Testable
-		/// @{
+    /// @name Standard Constructors
+    /// @{
 
-		/// print
-	  void print(const std::string& s="") const {
-	  	std::cout << s << "\n";
-	  	x_.print(s+"x");
-	  	priorFactor_->print(s+"density");
-	  }
+    ExtendedKalmanFilter(Key key_initial, T x_initial,
+        noiseModel::Gaussian::shared_ptr P_initial);
 
-		/// @}
-		/// @name Advanced Interface
-		/// @{
+    /// @}
+    /// @name Testable
+    /// @{
 
-	  ///TODO: comment
-		T predict(const MotionFactor& motionFactor);
+    /// print
+    void print(const std::string& s="") const {
+      std::cout << s << "\n";
+      x_.print(s+"x");
+      priorFactor_->print(s+"density");
+    }
 
-	  ///TODO: comment
-		T update(const MeasurementFactor& measurementFactor);
+    /// @}
+    /// @name Advanced Interface
+    /// @{
 
-		/// @}
-	};
+    ///TODO: comment
+    T predict(const MotionFactor& motionFactor);
+
+    ///TODO: comment
+    T update(const MeasurementFactor& measurementFactor);
+
+    /// @}
+  };
 
 } // namespace
 

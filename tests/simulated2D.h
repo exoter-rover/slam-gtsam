@@ -18,9 +18,9 @@
 // \callgraph
 #pragma once
 
-#include <gtsam/geometry/Point2.h>
 #include <gtsam/nonlinear/NonlinearFactor.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <gtsam/geometry/Point2.h>
 
 // \namespace
 
@@ -35,7 +35,7 @@ namespace simulated2D {
    */
   class Values: public gtsam::Values {
   private:
-  	int nrPoses_, nrPoints_;
+    int nrPoses_, nrPoints_;
 
   public:
     typedef gtsam::Values Base;  ///< base class
@@ -83,14 +83,16 @@ namespace simulated2D {
     }
   };
 
-
   /// Prior on a single pose
   inline Point2 prior(const Point2& x) {
     return x;
   }
 
   /// Prior on a single pose, optionally returns derivative
-  Point2 prior(const Point2& x, boost::optional<Matrix&> H = boost::none);
+  inline Point2 prior(const Point2& x, boost::optional<Matrix&> H = boost::none) {
+    if (H) *H = gtsam::eye(2);
+    return x;
+  }
 
   /// odometry between two poses
   inline Point2 odo(const Point2& x1, const Point2& x2) {
@@ -98,8 +100,12 @@ namespace simulated2D {
   }
 
   /// odometry between two poses, optionally returns derivative
-  Point2 odo(const Point2& x1, const Point2& x2, boost::optional<Matrix&> H1 =
-      boost::none, boost::optional<Matrix&> H2 = boost::none);
+  inline Point2 odo(const Point2& x1, const Point2& x2, boost::optional<Matrix&> H1 =
+    boost::none, boost::optional<Matrix&> H2 = boost::none) {
+      if (H1) *H1 = -gtsam::eye(2);
+      if (H2) *H2 = gtsam::eye(2);
+      return x2 - x1;
+  }
 
   /// measurement between landmark and pose
   inline Point2 mea(const Point2& x, const Point2& l) {
@@ -107,8 +113,12 @@ namespace simulated2D {
   }
 
   /// measurement between landmark and pose, optionally returns derivative
-  Point2 mea(const Point2& x, const Point2& l, boost::optional<Matrix&> H1 =
-      boost::none, boost::optional<Matrix&> H2 = boost::none);
+  inline Point2 mea(const Point2& x, const Point2& l, boost::optional<Matrix&> H1 =
+    boost::none, boost::optional<Matrix&> H2 = boost::none) {
+      if (H1) *H1 = -gtsam::eye(2);
+      if (H2) *H2 = gtsam::eye(2);
+      return l - x;
+  }
 
   /**
    *  Unary factor encoding a soft prior on a vector
@@ -135,10 +145,10 @@ namespace simulated2D {
 
     virtual ~GenericPrior() {}
 
-		/// @return a deep copy of this factor
+    /// @return a deep copy of this factor
     virtual gtsam::NonlinearFactor::shared_ptr clone() const {
-		  return boost::static_pointer_cast<gtsam::NonlinearFactor>(
-		      gtsam::NonlinearFactor::shared_ptr(new This(*this))); }
+      return boost::static_pointer_cast<gtsam::NonlinearFactor>(
+          gtsam::NonlinearFactor::shared_ptr(new This(*this))); }
 
   private:
 
@@ -148,7 +158,7 @@ namespace simulated2D {
     /// Serialization function
     friend class boost::serialization::access;
     template<class ARCHIVE>
-    void serialize(ARCHIVE & ar, const unsigned int version) {
+    void serialize(ARCHIVE & ar, const unsigned int /*version*/) {
       ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Base);
       ar & BOOST_SERIALIZATION_NVP(measured_);
     }
@@ -181,10 +191,10 @@ namespace simulated2D {
 
     virtual ~GenericOdometry() {}
 
-		/// @return a deep copy of this factor
+    /// @return a deep copy of this factor
     virtual gtsam::NonlinearFactor::shared_ptr clone() const {
-		  return boost::static_pointer_cast<gtsam::NonlinearFactor>(
-		      gtsam::NonlinearFactor::shared_ptr(new This(*this))); }
+      return boost::static_pointer_cast<gtsam::NonlinearFactor>(
+          gtsam::NonlinearFactor::shared_ptr(new This(*this))); }
 
   private:
 
@@ -194,7 +204,7 @@ namespace simulated2D {
     /// Serialization function
     friend class boost::serialization::access;
     template<class ARCHIVE>
-    void serialize(ARCHIVE & ar, const unsigned int version) {
+    void serialize(ARCHIVE & ar, const unsigned int /*version*/) {
       ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Base);
       ar & BOOST_SERIALIZATION_NVP(measured_);
     }
@@ -228,10 +238,10 @@ namespace simulated2D {
 
     virtual ~GenericMeasurement() {}
 
-		/// @return a deep copy of this factor
+    /// @return a deep copy of this factor
     virtual gtsam::NonlinearFactor::shared_ptr clone() const {
-		  return boost::static_pointer_cast<gtsam::NonlinearFactor>(
-		      gtsam::NonlinearFactor::shared_ptr(new This(*this))); }
+      return boost::static_pointer_cast<gtsam::NonlinearFactor>(
+          gtsam::NonlinearFactor::shared_ptr(new This(*this))); }
 
   private:
 
@@ -241,7 +251,7 @@ namespace simulated2D {
     /// Serialization function
     friend class boost::serialization::access;
     template<class ARCHIVE>
-    void serialize(ARCHIVE & ar, const unsigned int version) {
+    void serialize(ARCHIVE & ar, const unsigned int /*version*/) {
       ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Base);
       ar & BOOST_SERIALIZATION_NVP(measured_);
     }
@@ -260,3 +270,16 @@ namespace simulated2D {
   };
 
 } // namespace simulated2D
+
+/// traits
+namespace gtsam {
+template<class POSE, class LANDMARK>
+struct traits<simulated2D::GenericMeasurement<POSE, LANDMARK> > : Testable<
+    simulated2D::GenericMeasurement<POSE, LANDMARK> > {
+};
+
+template<>
+struct traits<simulated2D::Values> : public Testable<simulated2D::Values> {
+};
+}
+

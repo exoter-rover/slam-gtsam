@@ -18,10 +18,10 @@
 
 #pragma once
 
-#include <map>
-#include <boost/pool/pool_alloc.hpp>
+#include <gtsam/base/FastDefaultAllocator.h>
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/map.hpp>
+#include <map>
 
 namespace gtsam {
 
@@ -34,11 +34,13 @@ namespace gtsam {
  * @addtogroup base
  */
 template<typename KEY, typename VALUE>
-class FastMap : public std::map<KEY, VALUE, std::less<KEY>, boost::fast_pool_allocator<std::pair<const KEY, VALUE> > > {
+class FastMap : public std::map<KEY, VALUE, std::less<KEY>,
+  typename internal::FastDefaultAllocator<std::pair<const KEY, VALUE> >::type> {
 
 public:
 
-  typedef std::map<KEY, VALUE, std::less<KEY>, boost::fast_pool_allocator<std::pair<const KEY, VALUE> > > Base;
+  typedef std::map<KEY, VALUE, std::less<KEY>,
+    typename internal::FastDefaultAllocator<std::pair<const KEY, VALUE> >::type > Base;
 
   /** Default constructor */
   FastMap() {}
@@ -53,11 +55,22 @@ public:
   /** Copy constructor from the base map class */
   FastMap(const Base& x) : Base(x) {}
 
+  /** Conversion to a standard STL container */
+  operator std::map<KEY,VALUE>() const {
+    return std::map<KEY,VALUE>(this->begin(), this->end());
+  }
+
+  /** Handy 'insert' function for Matlab wrapper */
+  bool insert2(const KEY& key, const VALUE& val) { return Base::insert(std::make_pair(key, val)).second; }
+
+  /** Handy 'exists' function */
+  bool exists(const KEY& e) const { return this->find(e) != this->end(); }
+
 private:
   /** Serialization function */
   friend class boost::serialization::access;
   template<class ARCHIVE>
-  void serialize(ARCHIVE & ar, const unsigned int version) {
+  void serialize(ARCHIVE & ar, const unsigned int /*version*/) {
     ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Base);
   }
 };

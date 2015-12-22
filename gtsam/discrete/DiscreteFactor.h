@@ -19,97 +19,91 @@
 #pragma once
 
 #include <gtsam/discrete/Assignment.h>
-#include <gtsam/inference/IndexFactor.h>
+#include <gtsam/inference/Factor.h>
+#include <gtsam/base/Testable.h>
 
 namespace gtsam {
 
-	class DecisionTreeFactor;
-	class DiscreteConditional;
+class DecisionTreeFactor;
+class DiscreteConditional;
 
-	/**
-	 * Base class for discrete probabilistic factors
-	 * The most general one is the derived DecisionTreeFactor
-	 */
-	class DiscreteFactor: public IndexFactor {
+/**
+ * Base class for discrete probabilistic factors
+ * The most general one is the derived DecisionTreeFactor
+ */
+class GTSAM_EXPORT DiscreteFactor: public Factor {
 
-	public:
+public:
 
-		// typedefs needed to play nice with gtsam
-		typedef DiscreteFactor This;
-		typedef DiscreteConditional ConditionalType;
-		typedef boost::shared_ptr<DiscreteFactor> shared_ptr;
+  // typedefs needed to play nice with gtsam
+  typedef DiscreteFactor This; ///< This class
+  typedef boost::shared_ptr<DiscreteFactor> shared_ptr; ///< shared_ptr to this class
+  typedef Factor Base; ///< Our base class
 
-		/** A map from keys to values */
-		typedef Assignment<Index> Values;
-		typedef boost::shared_ptr<Values> sharedValues;
+  /** A map from keys to values
+   * TODO: Do we need this? Should we just use gtsam::Values?
+   * We just need another special DiscreteValue to represent labels,
+   * However, all other Lie's operators are undefined in this class.
+   * The good thing is we can have a Hybrid graph of discrete/continuous variables
+   * together..
+   * Another good thing is we don't need to have the special DiscreteKey which stores
+   * cardinality of a Discrete variable. It should be handled naturally in
+   * the new class DiscreteValue, as the varible's type (domain)
+   */
+  typedef Assignment<Key> Values;
+  typedef boost::shared_ptr<Values> sharedValues;
 
-	protected:
+public:
 
-		/// Construct n-way factor
-		DiscreteFactor(const std::vector<Index>& js) :
-				IndexFactor(js) {
-		}
+  /// @name Standard Constructors
+  /// @{
 
-		/// Construct unary factor
-		DiscreteFactor(Index j) :
-				IndexFactor(j) {
-		}
+  /** Default constructor creates empty factor */
+  DiscreteFactor() {}
 
-		/// Construct binary factor
-		DiscreteFactor(Index j1, Index j2) :
-				IndexFactor(j1, j2) {
-		}
+  /** Construct from container of keys.  This constructor is used internally from derived factor
+   *  constructors, either from a container of keys or from a boost::assign::list_of. */
+  template<typename CONTAINER>
+  DiscreteFactor(const CONTAINER& keys) : Base(keys) {}
 
-		/// construct from container
-		template<class KeyIterator>
-		DiscreteFactor(KeyIterator beginKey, KeyIterator endKey) :
-				IndexFactor(beginKey, endKey) {
-		}
+  /// Virtual destructor
+  virtual ~DiscreteFactor() {
+  }
 
-	public:
+  /// @}
+  /// @name Testable
+  /// @{
 
-		/// @name Standard Constructors
-		/// @{
+  // equals
+  virtual bool equals(const DiscreteFactor& lf, double tol = 1e-9) const = 0;
 
-		/// Default constructor for I/O
-		DiscreteFactor();
+  // print
+  virtual void print(const std::string& s = "DiscreteFactor\n",
+      const KeyFormatter& formatter = DefaultKeyFormatter) const {
+    Factor::print(s, formatter);
+  }
 
-		/// Virtual destructor
-		virtual ~DiscreteFactor() {}
+  /** Test whether the factor is empty */
+  virtual bool empty() const { return size() == 0; }
 
-		/// @}
-		/// @name Testable
-		/// @{
+  /// @}
+  /// @name Standard Interface
+  /// @{
 
-		// print
-		virtual void print(const std::string& s = "DiscreteFactor\n",
-				const IndexFormatter& formatter
-				=DefaultIndexFormatter) const {
-			IndexFactor::print(s,formatter);
-		}
+  /// Find value for given assignment of values to variables
+  virtual double operator()(const Values&) const = 0;
 
-		/// @}
-		/// @name Standard Interface
-		/// @{
+  /// Multiply in a DecisionTreeFactor and return the result as DecisionTreeFactor
+  virtual DecisionTreeFactor operator*(const DecisionTreeFactor&) const = 0;
 
-		/// Find value for given assignment of values to variables
-		virtual double operator()(const Values&) const = 0;
+  virtual DecisionTreeFactor toDecisionTreeFactor() const = 0;
 
-		/// Multiply in a DecisionTreeFactor and return the result as DecisionTreeFactor
-		virtual DecisionTreeFactor operator*(const DecisionTreeFactor&) const = 0;
-
-		virtual DecisionTreeFactor toDecisionTreeFactor() const = 0;
-
-		/**
-		 * Permutes the factor, but for efficiency requires the permutation
-		 * to already be inverted.
-		 */
-		virtual void permuteWithInverse(const Permutation& inversePermutation){
-			IndexFactor::permuteWithInverse(inversePermutation);
-		}
-
-		/// @}
-	};
+  /// @}
+};
 // DiscreteFactor
+
+// traits
+template<> struct traits<DiscreteFactor> : public Testable<DiscreteFactor> {};
+template<> struct traits<DiscreteFactor::Values> : public Testable<DiscreteFactor::Values> {};
 
 }// namespace gtsam

@@ -31,7 +31,7 @@ namespace simulated2DOriented {
   /// Specialized Values structure with syntactic sugar for
   /// compatibility with matlab
   class Values: public gtsam::Values {
-  	int nrPoses_, nrPoints_;
+    int nrPoses_, nrPoints_;
   public:
     Values() : nrPoses_(0), nrPoints_(0)  {}
 
@@ -47,10 +47,10 @@ namespace simulated2DOriented {
       nrPoints_++;
     }
 
-    int nrPoses() const {	return nrPoses_;	} ///< nr of poses
-    int nrPoints() const { return nrPoints_;	} ///< nr of landmarks
+    int nrPoses() const {  return nrPoses_;  } ///< nr of poses
+    int nrPoints() const { return nrPoints_;  } ///< nr of landmarks
 
-    Pose2 pose(Key i) const { return at<Pose2>(i);	} ///< get a pose
+    Pose2 pose(Key i) const { return at<Pose2>(i);  } ///< get a pose
     Point2 point(Key j) const { return at<Point2>(j); } ///< get a landmark
   };
 
@@ -62,7 +62,10 @@ namespace simulated2DOriented {
   }
 
   /// Prior on a single pose, optional derivative version
-  Pose2 prior(const Pose2& x, boost::optional<Matrix&> H = boost::none);
+  Pose2 prior(const Pose2& x, boost::optional<Matrix&> H = boost::none) {
+    if (H) *H = gtsam::eye(3);
+    return x;
+  }
 
   /// odometry between two poses
   inline Pose2 odo(const Pose2& x1, const Pose2& x2) {
@@ -71,7 +74,9 @@ namespace simulated2DOriented {
 
   /// odometry between two poses, optional derivative version
   Pose2 odo(const Pose2& x1, const Pose2& x2, boost::optional<Matrix&> H1 =
-      boost::none, boost::optional<Matrix&> H2 = boost::none);
+      boost::none, boost::optional<Matrix&> H2 = boost::none) {
+    return x1.between(x2, H1, H2);
+  }
 
   /// Unary factor encoding a soft prior on a vector
   template<class VALUE = Pose2>
@@ -118,10 +123,10 @@ namespace simulated2DOriented {
       return measured_.localCoordinates(odo(x1, x2, H1, H2));
     }
 
-		/// @return a deep copy of this factor
+    /// @return a deep copy of this factor
     virtual gtsam::NonlinearFactor::shared_ptr clone() const {
-		  return boost::static_pointer_cast<gtsam::NonlinearFactor>(
-		      gtsam::NonlinearFactor::shared_ptr(new This(*this))); }
+      return boost::static_pointer_cast<gtsam::NonlinearFactor>(
+          gtsam::NonlinearFactor::shared_ptr(new This(*this))); }
 
   };
 

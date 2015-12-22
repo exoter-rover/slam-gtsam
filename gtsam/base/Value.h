@@ -18,9 +18,10 @@
 
 #pragma once
 
-#include <memory>
-#include <boost/serialization/assume_abstract.hpp>
 #include <gtsam/base/Vector.h>
+#include <boost/serialization/assume_abstract.hpp>
+#include <memory>
+
 
 namespace gtsam {
 
@@ -36,18 +37,19 @@ namespace gtsam {
    * Values can operate generically on Value objects, retracting or computing
    * local coordinates for many Value objects of different types.
    *
-   * When you implement retract_(), localCoordinates_(), and equals_(), we
-   * suggest first implementing versions of these functions that work directly
-   * with derived objects, then using the provided helper functions to
-   * implement the generic Value versions.  This makes your implementation
-   * easier, and also improves performance in situations where the derived type
-   * is in fact known, such as in most implementations of \c evaluateError() in
-   * classes derived from NonlinearFactor.
+   * Inheriting from the DerivedValue class templated provides a generic implementation of
+   * the pure virtual functions retract_(), localCoordinates_(), and equals_(), eliminating
+   * the need to implement these functions in your class. Note that you must inherit from
+   * DerivedValue templated on the class you are defining. For example you cannot define
+   * the following
+   * \code
+   * class Rot3 : public DerivedValue<Point3>{ \\classdef }
+   * \endcode
    *
    * Using the above practice, here is an example of implementing a typical
    * class derived from Value:
    * \code
-     class Rot3 : public Value {
+     class GTSAM_EXPORT Rot3 : public DerivedValue<Rot3> {
      public:
        // Constructor, there is never a need to call the Value base class constructor.
        Rot3() { ... }
@@ -74,31 +76,10 @@ namespace gtsam {
          // Math to implement 3D rotation localCoordinates, e.g. logarithm map
          return Vector(result);
        }
-
-       // Equals implementing the generic Value interface (virtual, implements Value::equals_())
-       virtual bool equals_(const Value& other, double tol = 1e-9) const {
-         // Call our provided helper function to call your Rot3-specific
-         // equals with appropriate casting.
-         return CallDerivedEquals(this, other, tol);
-       }
-
-       // retract implementing the generic Value interface (virtual, implements Value::retract_())
-       virtual std::auto_ptr<Value> retract_(const Vector& delta) const {
-         // Call our provided helper function to call your Rot3-specific
-         // retract and do the appropriate casting and allocation.
-         return CallDerivedRetract(this, delta);
-       }
-
-       // localCoordinates implementing the generic Value interface (virtual, implements Value::localCoordinates_())
-       virtual Vector localCoordinates_(const Value& value) const {
-         // Call our provided helper function to call your Rot3-specific
-         // localCoordinates and do the appropriate casting.
-         return CallDerivedLocalCoordinates(this, value);
-       }
      };
      \endcode
    */
-  class Value {
+  class GTSAM_EXPORT Value {
   public:
 
     /** Clone this value in a special memory pool, must be deleted with Value::deallocate_, *not* with the 'delete' operator. */
@@ -107,8 +88,8 @@ namespace gtsam {
     /** Deallocate a raw pointer of this value */
     virtual void deallocate_() const = 0;
 
-		/** Clone this value (normal clone on the heap, delete with 'delete' operator) */
-		virtual boost::shared_ptr<Value> clone() const = 0;
+    /** Clone this value (normal clone on the heap, delete with 'delete' operator) */
+    virtual boost::shared_ptr<Value> clone() const = 0;
 
     /** Compare this Value with another for equality. */
     virtual bool equals_(const Value& other, double tol = 1e-9) const = 0;
@@ -140,45 +121,53 @@ namespace gtsam {
     virtual Vector localCoordinates_(const Value& value) const = 0;
 
     /** Assignment operator */
-    virtual Value& operator=(const Value& rhs) = 0;
+    virtual Value& operator=(const Value& /*rhs*/) {
+      //needs a empty definition so recursion in implicit derived assignment operators work
+     return *this;
+    }
+
+    /** Cast to known ValueType */
+    template<typename ValueType>
+    const ValueType& cast() const;
 
     /** Virutal destructor */
     virtual ~Value() {}
 
   private:
-  	/** Empty serialization function.
-  	 *
-  	 * There are two important things that users need to do to serialize derived objects in Values successfully:
-  	 * (Those derived objects are stored in Values as pointer to this abstract base class Value)
-  	 *
-  	 * 		1. All DERIVED classes derived from Value must put the following line in their serialization function:
-  	 * 			\code
-  	  					ar & boost::serialization::make_nvp("DERIVED", boost::serialization::base_object<Value>(*this));
-						\endcode
-  	 * 			or, alternatively
-  	 * 			\code
-  	  		      ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Value);
-  	  		  \endcode
-  	 * 			See: http://www.boost.org/doc/libs/release/libs/serialization/doc/serialization.html#runtimecasting
-  	 *
-  	 * 		2. The source module that includes archive class headers to serialize objects of derived classes
-  	 * 		 (boost/archive/text_oarchive.h, for example) must *export* all derived classes, using either
-  	 * 		 BOOST_CLASS_EXPORT or BOOST_CLASS_EXPORT_GUID macros:
-  	 	 	 	 	 \code
-  	  					BOOST_CLASS_EXPORT(DERIVED_CLASS_1)
-  	  					BOOST_CLASS_EXPORT_GUID(DERIVED_CLASS_2, "DERIVED_CLASS_2_ID_STRING")
-  	 	 	 	 	 \endcode
-  	 * 		  See: 	http://www.boost.org/doc/libs/release/libs/serialization/doc/serialization.html#derivedpointers
-  	 * 		  			http://www.boost.org/doc/libs/release/libs/serialization/doc/serialization.html#export
-  	 * 		  			http://www.boost.org/doc/libs/release/libs/serialization/doc/serialization.html#instantiation\
-  	 * 		  			http://www.boost.org/doc/libs/release/libs/serialization/doc/special.html#export
-  	 * 		  			http://www.boost.org/doc/libs/release/libs/serialization/doc/traits.html#export
-  	 * 		  The last two links explain why these export lines have to be in the same source module that includes
-  	 * 		  any of the archive class headers.
-  	 * */
-  	friend class boost::serialization::access;
-  	template<class ARCHIVE>
-  	void serialize(ARCHIVE & ar, const unsigned int version) {}
+    /** Empty serialization function.
+     *
+     * There are two important things that users need to do to serialize derived objects in Values successfully:
+     * (Those derived objects are stored in Values as pointer to this abstract base class Value)
+     *
+     *     1. All DERIVED classes derived from Value must put the following line in their serialization function:
+     *       \code
+                ar & boost::serialization::make_nvp("DERIVED", boost::serialization::base_object<Value>(*this));
+            \endcode
+     *       or, alternatively
+     *       \code
+                ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Value);
+            \endcode
+     *       See: http://www.boost.org/doc/libs/release/libs/serialization/doc/serialization.html#runtimecasting
+     *
+     *     2. The source module that includes archive class headers to serialize objects of derived classes
+     *      (boost/archive/text_oarchive.h, for example) must *export* all derived classes, using either
+     *      BOOST_CLASS_EXPORT or BOOST_CLASS_EXPORT_GUID macros:
+                 \code
+                BOOST_CLASS_EXPORT(DERIVED_CLASS_1)
+                BOOST_CLASS_EXPORT_GUID(DERIVED_CLASS_2, "DERIVED_CLASS_2_ID_STRING")
+                 \endcode
+     *       See:   http://www.boost.org/doc/libs/release/libs/serialization/doc/serialization.html#derivedpointers
+     *             http://www.boost.org/doc/libs/release/libs/serialization/doc/serialization.html#export
+     *             http://www.boost.org/doc/libs/release/libs/serialization/doc/serialization.html#instantiation\
+     *             http://www.boost.org/doc/libs/release/libs/serialization/doc/special.html#export
+     *             http://www.boost.org/doc/libs/release/libs/serialization/doc/traits.html#export
+     *       The last two links explain why these export lines have to be in the same source module that includes
+     *       any of the archive class headers.
+     * */
+    friend class boost::serialization::access;
+    template<class ARCHIVE>
+    void serialize(ARCHIVE & /*ar*/, const unsigned int /*version*/) {
+    }
 
   };
 

@@ -19,54 +19,11 @@
 #pragma once
 
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <gtsam/nonlinear/NonlinearOptimizerParams.h>
 
 namespace gtsam {
 
 class NonlinearOptimizer;
-
-/** The common parameters for Nonlinear optimizers.  Most optimizers
- * deriving from NonlinearOptimizer also subclass the parameters.
- */
-class NonlinearOptimizerParams {
-public:
-  /** See NonlinearOptimizerParams::verbosity */
-  enum Verbosity {
-    SILENT,
-    ERROR,
-    VALUES,
-    DELTA,
-    LINEAR
-  };
-
-  size_t maxIterations; ///< The maximum iterations to stop iterating (default 100)
-  double relativeErrorTol; ///< The maximum relative error decrease to stop iterating (default 1e-5)
-  double absoluteErrorTol; ///< The maximum absolute error decrease to stop iterating (default 1e-5)
-  double errorTol; ///< The maximum total error to stop iterating (default 0.0)
-  Verbosity verbosity; ///< The printing verbosity during optimization (default SILENT)
-
-  NonlinearOptimizerParams() :
-    maxIterations(100), relativeErrorTol(1e-5), absoluteErrorTol(1e-5),
-    errorTol(0.0), verbosity(SILENT) {}
-
-  virtual ~NonlinearOptimizerParams() {}
-  virtual void print(const std::string& str = "") const ;
-
-  size_t getMaxIterations() const { return maxIterations; }
-  double getRelativeErrorTol() const { return relativeErrorTol; }
-  double getAbsoluteErrorTol() const { return absoluteErrorTol; }
-  double getErrorTol() const { return errorTol; }
-  std::string getVerbosity() const { return verbosityTranslator(verbosity); }
-
-  void setMaxIterations(size_t value) { maxIterations = value; }
-  void setRelativeErrorTol(double value) { relativeErrorTol = value; }
-  void setAbsoluteErrorTol(double value) { absoluteErrorTol = value; }
-  void setErrorTol(double value) { errorTol  = value ; }
-  void setVerbosity(const std::string &src) { verbosity = verbosityTranslator(src); }
-
-private:
-  Verbosity verbosityTranslator(const std::string &s) const;
-  std::string verbosityTranslator(Verbosity value) const;
-};
 
 /**
  * Base class for a nonlinear optimization state, including the current estimate
@@ -75,7 +32,7 @@ private:
  * additional state specific to the algorithm (for example, Dogleg state
  * contains the current trust region radius).
  */
-class NonlinearOptimizerState {
+class GTSAM_EXPORT NonlinearOptimizerState {
 public:
 
   /** The current estimate of the variable values. */
@@ -85,7 +42,7 @@ public:
   double error;
 
   /** The number of optimization iterations performed. */
-  unsigned int iterations;
+  int iterations;
 
   NonlinearOptimizerState() {}
 
@@ -174,7 +131,7 @@ Values::const_shared_ptr result = DoglegOptimizer(graph, initialValues, params).
  * For more flexibility, since all functions are virtual, you may override them
  * in your own derived class.
  */
-class NonlinearOptimizer {
+class GTSAM_EXPORT NonlinearOptimizer {
 
 protected:
   NonlinearFactorGraph graph_;
@@ -197,19 +154,19 @@ public:
    */
   virtual const Values& optimize() { defaultOptimize(); return values(); }
 
-	/**
-	 * Optimize, but return empty result if any uncaught exception is thrown
-	 * Intended for MATLAB. In C++, use above and catch exceptions.
-	 * No message is printed: it is up to the caller to check the result
-	 * @param optimizer a non-linear optimizer
-	 */
-	const Values& optimizeSafely();
+  /**
+   * Optimize, but return empty result if any uncaught exception is thrown
+   * Intended for MATLAB. In C++, use above and catch exceptions.
+   * No message is printed: it is up to the caller to check the result
+   * @param optimizer a non-linear optimizer
+   */
+  const Values& optimizeSafely();
 
-	/// return error
+  /// return error
   double error() const { return _state().error; }
 
   /// return number of iterations
-  unsigned int iterations() const { return _state().iterations; }
+  int iterations() const { return _state().iterations; }
 
   /// return values
   const Values& values() const { return _state().values; }
@@ -222,6 +179,10 @@ public:
   /** Virtual destructor */
   virtual ~NonlinearOptimizer() {}
 
+  /** Default function to do linear solve, i.e. optimize a GaussianFactorGraph */
+  virtual VectorValues solve(const GaussianFactorGraph &gfg,
+      const Values& initial, const NonlinearOptimizerParams& params) const;
+
   /** Perform a single iteration, returning a new NonlinearOptimizer class
    * containing the updated variable assignments, which may be retrieved with
    * values().
@@ -230,7 +191,7 @@ public:
 
   /// @}
 
-protected:	
+protected:  
   /** A default implementation of the optimization loop, which calls iterate()
    * until checkConvergence returns true.
    */
@@ -249,8 +210,8 @@ protected:
  * the absolute error decrease is less than absoluteErrorTreshold, <em>or</em>
  * the error itself is less than errorThreshold.
  */
-bool checkConvergence(double relativeErrorTreshold,
+GTSAM_EXPORT bool checkConvergence(double relativeErrorTreshold,
     double absoluteErrorTreshold, double errorThreshold,
-    double currentError, double newError, NonlinearOptimizerParams::Verbosity verbosity);
+    double currentError, double newError, NonlinearOptimizerParams::Verbosity verbosity = NonlinearOptimizerParams::SILENT);
 
 } // gtsam

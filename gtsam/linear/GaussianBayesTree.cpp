@@ -17,70 +17,92 @@
  * @author  Richard Roberts
  */
 
+#include <gtsam/base/treeTraversal-inst.h>
+#include <gtsam/inference/BayesTree-inst.h>
+#include <gtsam/inference/BayesTreeCliqueBase-inst.h>
+#include <gtsam/linear/linearAlgorithms-inst.h>
 #include <gtsam/linear/GaussianBayesTree.h>
-#include <gtsam/linear/GaussianFactorGraph.h>
+#include <gtsam/linear/GaussianBayesNet.h>
+#include <gtsam/linear/VectorValues.h>
 
 namespace gtsam {
 
-/* ************************************************************************* */
-VectorValues optimize(const GaussianBayesTree& bayesTree) {
-  VectorValues result = *allocateVectorValues(bayesTree);
-  optimizeInPlace(bayesTree, result);
-  return result;
-}
+  // Instantiate base class
+  template class BayesTreeCliqueBase<GaussianBayesTreeClique, GaussianFactorGraph>;
+  template class BayesTree<GaussianBayesTreeClique>;
 
-/* ************************************************************************* */
-void optimizeInPlace(const GaussianBayesTree& bayesTree, VectorValues& result) {
-  internal::optimizeInPlace<GaussianBayesTree>(bayesTree.root(), result);
-}
+  /* ************************************************************************* */
+  namespace internal
+  {
+    /* ************************************************************************* */
+    double logDeterminant(const GaussianBayesTreeClique::shared_ptr& clique, double& parentSum)
+    {
+      parentSum += clique->conditional()->get_R().diagonal().unaryExpr(std::ptr_fun<double,double>(log)).sum();
+      assert(false);
+      return 0;
+    }
+  }
 
-/* ************************************************************************* */
-VectorValues optimizeGradientSearch(const GaussianBayesTree& bayesTree) {
-  tic(0, "Allocate VectorValues");
-  VectorValues grad = *allocateVectorValues(bayesTree);
-  toc(0, "Allocate VectorValues");
+  /* ************************************************************************* */
+  bool GaussianBayesTree::equals(const This& other, double tol) const
+  {
+    return Base::equals(other, tol);
+  }
 
-  optimizeGradientSearchInPlace(bayesTree, grad);
+  /* ************************************************************************* */
+  VectorValues GaussianBayesTree::optimize() const
+  {
+    return internal::linearAlgorithms::optimizeBayesTree(*this);
+  }
 
-  return grad;
-}
+  /* ************************************************************************* */
+  VectorValues GaussianBayesTree::optimizeGradientSearch() const
+  {
+    gttic(GaussianBayesTree_optimizeGradientSearch);
+    return GaussianFactorGraph(*this).optimizeGradientSearch();
+  }
 
-/* ************************************************************************* */
-void optimizeGradientSearchInPlace(const GaussianBayesTree& bayesTree, VectorValues& grad) {
-  tic(1, "Compute Gradient");
-  // Compute gradient (call gradientAtZero function, which is defined for various linear systems)
-  gradientAtZero(bayesTree, grad);
-  double gradientSqNorm = grad.dot(grad);
-  toc(1, "Compute Gradient");
+  /* ************************************************************************* */
+  VectorValues GaussianBayesTree::gradient(const VectorValues& x0) const {
+    return GaussianFactorGraph(*this).gradient(x0);
+  }
 
-  tic(2, "Compute R*g");
-  // Compute R * g
-  FactorGraph<JacobianFactor> Rd_jfg(bayesTree);
-  Errors Rg = Rd_jfg * grad;
-  toc(2, "Compute R*g");
+  /* ************************************************************************* */
+  VectorValues GaussianBayesTree::gradientAtZero() const {
+    return GaussianFactorGraph(*this).gradientAtZero();
+  }
 
-  tic(3, "Compute minimizing step size");
-  // Compute minimizing step size
-  double step = -gradientSqNorm / dot(Rg, Rg);
-  toc(3, "Compute minimizing step size");
+  /* ************************************************************************* */
+  double GaussianBayesTree::error(const VectorValues& x) const {
+    return GaussianFactorGraph(*this).error(x);
+  }
 
-  tic(4, "Compute point");
-  // Compute steepest descent point
-  scal(step, grad);
-  toc(4, "Compute point");
-}
+  /* ************************************************************************* */
+  double GaussianBayesTree::logDeterminant() const
+  {
+    if(this->roots_.empty()) {
+      return 0.0;
+    } else {
+      double sum = 0.0;
+      treeTraversal::DepthFirstForest(*this, sum, internal::logDeterminant);
+      return sum;
+    }
+  }
 
-/* ************************************************************************* */
-VectorValues gradient(const GaussianBayesTree& bayesTree, const VectorValues& x0) {
-  return gradient(FactorGraph<JacobianFactor>(bayesTree), x0);
-}
+  /* ************************************************************************* */
+  double GaussianBayesTree::determinant() const
+  {
+    return exp(logDeterminant());
+  }
 
-/* ************************************************************************* */
-void gradientAtZero(const GaussianBayesTree& bayesTree, VectorValues& g) {
-  gradientAtZero(FactorGraph<JacobianFactor>(bayesTree), g);
-}
+  /* ************************************************************************* */
+  Matrix GaussianBayesTree::marginalCovariance(Key key) const
+  {
+    return marginalFactor(key)->information().inverse();
+  }
 
-}
+
+} // \namespace gtsam
 
 
 

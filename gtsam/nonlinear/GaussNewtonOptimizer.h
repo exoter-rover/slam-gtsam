@@ -13,12 +13,12 @@
  * @file    GaussNewtonOptimizer.h
  * @brief   
  * @author  Richard Roberts
- * @date 	Feb 26, 2012
+ * @date   Feb 26, 2012
  */
 
 #pragma once
 
-#include <gtsam/nonlinear/SuccessiveLinearizationOptimizer.h>
+#include <gtsam/nonlinear/NonlinearOptimizer.h>
 
 namespace gtsam {
 
@@ -27,10 +27,10 @@ class GaussNewtonOptimizer;
 /** Parameters for Gauss-Newton optimization, inherits from
  * NonlinearOptimizationParams.
  */
-class GaussNewtonParams : public SuccessiveLinearizationParams {
+class GTSAM_EXPORT GaussNewtonParams : public NonlinearOptimizerParams {
 };
 
-class GaussNewtonState : public NonlinearOptimizerState {
+class GTSAM_EXPORT GaussNewtonState : public NonlinearOptimizerState {
 protected:
   GaussNewtonState(const NonlinearFactorGraph& graph, const Values& values, unsigned int iterations = 0) :
     NonlinearOptimizerState(graph, values, iterations) {}
@@ -41,11 +41,11 @@ protected:
 /**
  * This class performs Gauss-Newton nonlinear optimization
  */
-class GaussNewtonOptimizer : public NonlinearOptimizer {
+class GTSAM_EXPORT GaussNewtonOptimizer : public NonlinearOptimizer {
 
 protected:
-	GaussNewtonParams params_;
-	GaussNewtonState state_;
+  GaussNewtonParams params_;
+  GaussNewtonState state_;
 
 public:
   /// @name Standard interface
@@ -61,7 +61,7 @@ public:
    */
   GaussNewtonOptimizer(const NonlinearFactorGraph& graph, const Values& initialValues,
       const GaussNewtonParams& params = GaussNewtonParams()) :
-        NonlinearOptimizer(graph), params_(ensureHasOrdering(params, graph, initialValues)), state_(graph, initialValues) {}
+        NonlinearOptimizer(graph), params_(ensureHasOrdering(params, graph)), state_(graph, initialValues) {}
 
   /** Standard constructor, requires a nonlinear factor graph, initial
    * variable assignments, and optimization parameters.  For convenience this
@@ -88,11 +88,17 @@ public:
    */
   virtual void iterate();
 
-  /** Access the parameters */
+  /** Read-only access the parameters */
   const GaussNewtonParams& params() const { return params_; }
 
-  /** Access the last state */
+  /** Read/write access the parameters. */
+  GaussNewtonParams& params() { return params_; }
+
+  /** Read-only access the last state */
   const GaussNewtonState& state() const { return state_; }
+
+  /** Read/write access the last state. When modifying the state, the error, etc. must be consistent before calling iterate() */
+  GaussNewtonState& state() { return state_; }
 
   /// @}
 
@@ -104,11 +110,7 @@ protected:
   virtual const NonlinearOptimizerState& _state() const { return state_; }
 
   /** Internal function for computing a COLAMD ordering if no ordering is specified */
-  GaussNewtonParams ensureHasOrdering(GaussNewtonParams params, const NonlinearFactorGraph& graph, const Values& values) const {
-    if(!params.ordering)
-      params.ordering = *graph.orderingCOLAMD(values);
-    return params;
-  }
+  GaussNewtonParams ensureHasOrdering(GaussNewtonParams params, const NonlinearFactorGraph& graph) const;
 
 };
 

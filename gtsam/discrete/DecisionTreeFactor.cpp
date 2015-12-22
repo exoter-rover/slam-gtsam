@@ -28,76 +28,112 @@ using namespace std;
 
 namespace gtsam {
 
-	/* ******************************************************************************** */
-	DecisionTreeFactor::DecisionTreeFactor() {
-	}
+  /* ******************************************************************************** */
+  DecisionTreeFactor::DecisionTreeFactor() {
+  }
 
-	/* ******************************************************************************** */
-	DecisionTreeFactor::DecisionTreeFactor(const DiscreteKeys& keys,
-			const ADT& potentials) :
-			DiscreteFactor(keys.indices()), Potentials(keys, potentials) {
-	}
+  /* ******************************************************************************** */
+  DecisionTreeFactor::DecisionTreeFactor(const DiscreteKeys& keys,
+      const ADT& potentials) :
+      DiscreteFactor(keys.indices()), Potentials(keys, potentials) {
+  }
 
-	/* *************************************************************************/
-	DecisionTreeFactor::DecisionTreeFactor(const DiscreteConditional& c) :
-			DiscreteFactor(c.keys()), Potentials(c) {
-	}
+  /* *************************************************************************/
+  DecisionTreeFactor::DecisionTreeFactor(const DiscreteConditional& c) :
+      DiscreteFactor(c.keys()), Potentials(c) {
+  }
 
-	/* ************************************************************************* */
-	bool DecisionTreeFactor::equals(const This& other, double tol) const {
-		return IndexFactor::equals(other, tol) && Potentials::equals(other, tol);
-	}
+  /* ************************************************************************* */
+  bool DecisionTreeFactor::equals(const DiscreteFactor& other, double tol) const {
+    if(!dynamic_cast<const DecisionTreeFactor*>(&other)) {
+      return false;
+    }
+    else {
+      const DecisionTreeFactor& f(static_cast<const DecisionTreeFactor&>(other));
+      return Potentials::equals(f, tol);
+    }
+  }
 
-	/* ************************************************************************* */
-	void DecisionTreeFactor::print(const string& s,
-			const IndexFormatter& formatter) const {
-		cout << s;
-		IndexFactor::print("IndexFactor:",formatter);
-		Potentials::print("Potentials:",formatter);
-	}
+  /* ************************************************************************* */
+  void DecisionTreeFactor::print(const string& s,
+      const KeyFormatter& formatter) const {
+    cout << s;
+    Potentials::print("Potentials:",formatter);
+  }
 
-	/* ************************************************************************* */
-	DecisionTreeFactor DecisionTreeFactor::apply //
-	(const DecisionTreeFactor& f, ADT::Binary op) const {
-		map<Index,size_t> cs; // new cardinalities
-		// make unique key-cardinality map
-		BOOST_FOREACH(Index j, keys()) cs[j] = cardinality(j);
-		BOOST_FOREACH(Index j, f.keys()) cs[j] = f.cardinality(j);
-		// Convert map into keys
-		DiscreteKeys keys;
-		BOOST_FOREACH(const DiscreteKey& key, cs)
-			keys.push_back(key);
-		// apply operand
-		ADT result = ADT::apply(f, op);
-		// Make a new factor
-		return DecisionTreeFactor(keys, result);
-	}
+  /* ************************************************************************* */
+  DecisionTreeFactor DecisionTreeFactor::apply(const DecisionTreeFactor& f,
+    ADT::Binary op) const {
+    map<Key,size_t> cs; // new cardinalities
+    // make unique key-cardinality map
+    BOOST_FOREACH(Key j, keys()) cs[j] = cardinality(j);
+    BOOST_FOREACH(Key j, f.keys()) cs[j] = f.cardinality(j);
+    // Convert map into keys
+    DiscreteKeys keys;
+    BOOST_FOREACH(const DiscreteKey& key, cs)
+      keys.push_back(key);
+    // apply operand
+    ADT result = ADT::apply(f, op);
+    // Make a new factor
+    return DecisionTreeFactor(keys, result);
+  }
 
-	/* ************************************************************************* */
-	DecisionTreeFactor::shared_ptr DecisionTreeFactor::combine //
-	(size_t nrFrontals, ADT::Binary op) const {
+  /* ************************************************************************* */
+  DecisionTreeFactor::shared_ptr DecisionTreeFactor::combine(size_t nrFrontals,
+    ADT::Binary op) const {
 
-		if (nrFrontals == 0 || nrFrontals > size()) throw invalid_argument(
-				(boost::format(
-						"DecisionTreeFactor::combine: invalid number of frontal keys %d, nr.keys=%d")
-						% nrFrontals % size()).str());
+    if (nrFrontals > size()) throw invalid_argument(
+        (boost::format(
+            "DecisionTreeFactor::combine: invalid number of frontal keys %d, nr.keys=%d")
+            % nrFrontals % size()).str());
 
-		// sum over nrFrontals keys
-		size_t i;
-		ADT result(*this);
-		for (i = 0; i < nrFrontals; i++) {
-			Index j = keys()[i];
-			result = result.combine(j, cardinality(j), op);
-		}
+    // sum over nrFrontals keys
+    size_t i;
+    ADT result(*this);
+    for (i = 0; i < nrFrontals; i++) {
+      Key j = keys()[i];
+      result = result.combine(j, cardinality(j), op);
+    }
 
-		// create new factor, note we start keys after nrFrontals
-		DiscreteKeys dkeys;
-		for (; i < keys().size(); i++) {
-			Index j = keys()[i];
-			dkeys.push_back(DiscreteKey(j,cardinality(j)));
-		}
-		return boost::make_shared<DecisionTreeFactor>(dkeys, result);
-	}
+    // create new factor, note we start keys after nrFrontals
+    DiscreteKeys dkeys;
+    for (; i < keys().size(); i++) {
+      Key j = keys()[i];
+      dkeys.push_back(DiscreteKey(j,cardinality(j)));
+    }
+    return boost::make_shared<DecisionTreeFactor>(dkeys, result);
+  }
+
+
+  /* ************************************************************************* */
+  DecisionTreeFactor::shared_ptr DecisionTreeFactor::combine(const Ordering& frontalKeys,
+    ADT::Binary op) const {
+
+    if (frontalKeys.size() > size()) throw invalid_argument(
+        (boost::format(
+            "DecisionTreeFactor::combine: invalid number of frontal keys %d, nr.keys=%d")
+            % frontalKeys.size() % size()).str());
+
+    // sum over nrFrontals keys
+    size_t i;
+    ADT result(*this);
+    for (i = 0; i < frontalKeys.size(); i++) {
+      Key j = frontalKeys[i];
+      result = result.combine(j, cardinality(j), op);
+    }
+
+    // create new factor, note we collect keys that are not in frontalKeys
+    // TODO: why do we need this??? result should contain correct keys!!!
+    DiscreteKeys dkeys;
+    for (i = 0; i < keys().size(); i++) {
+      Key j = keys()[i];
+      // TODO: inefficient!
+      if (std::find(frontalKeys.begin(), frontalKeys.end(), j) != frontalKeys.end())
+        continue;
+      dkeys.push_back(DiscreteKey(j,cardinality(j)));
+    }
+    return boost::make_shared<DecisionTreeFactor>(dkeys, result);
+  }
 
 /* ************************************************************************* */
 } // namespace gtsam

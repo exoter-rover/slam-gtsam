@@ -19,89 +19,115 @@
 //#define ENABLE_TIMING
 #include <gtsam/discrete/DiscreteFactorGraph.h>
 #include <gtsam/discrete/DiscreteConditional.h>
-#include <gtsam/inference/EliminationTree-inl.h>
+#include <gtsam/discrete/DiscreteBayesTree.h>
+#include <gtsam/discrete/DiscreteEliminationTree.h>
+#include <gtsam/discrete/DiscreteJunctionTree.h>
+#include <gtsam/inference/FactorGraph-inst.h>
+#include <gtsam/inference/EliminateableFactorGraph-inst.h>
 #include <boost/make_shared.hpp>
 
 namespace gtsam {
 
-	// Explicitly instantiate so we don't have to include everywhere
-	template class FactorGraph<DiscreteFactor> ;
-	template class EliminationTree<DiscreteFactor> ;
+  // Instantiate base classes
+  template class FactorGraph<DiscreteFactor>;
+  template class EliminateableFactorGraph<DiscreteFactorGraph>;
 
-	/* ************************************************************************* */
-	DiscreteFactorGraph::DiscreteFactorGraph() {
-	}
+  /* ************************************************************************* */
+  bool DiscreteFactorGraph::equals(const This& fg, double tol) const
+  {
+    return Base::equals(fg, tol);
+  }
 
-	/* ************************************************************************* */
-	DiscreteFactorGraph::DiscreteFactorGraph(
-			const BayesNet<DiscreteConditional>& bayesNet) :
-			FactorGraph<DiscreteFactor>(bayesNet) {
-	}
+  /* ************************************************************************* */
+  KeySet DiscreteFactorGraph::keys() const {
+    KeySet keys;
+    BOOST_FOREACH(const sharedFactor& factor, *this)
+    if (factor) keys.insert(factor->begin(), factor->end());
+    return keys;
+  }
 
-	/* ************************************************************************* */
-	FastSet<Index> DiscreteFactorGraph::keys() const {
-		FastSet<Index> keys;
-		BOOST_FOREACH(const sharedFactor& factor, *this)
-		if (factor) keys.insert(factor->begin(), factor->end());
-		return keys;
-	}
+  /* ************************************************************************* */
+  DecisionTreeFactor DiscreteFactorGraph::product() const {
+    DecisionTreeFactor result;
+    BOOST_FOREACH(const sharedFactor& factor, *this)
+      if (factor) result = (*factor) * result;
+    return result;
+  }
 
-	/* ************************************************************************* */
-	DecisionTreeFactor DiscreteFactorGraph::product() const {
-		DecisionTreeFactor result;
-		BOOST_FOREACH(const sharedFactor& factor, *this)
-			if (factor) result = (*factor) * result;
-		return result;
-	}
+  /* ************************************************************************* */
+  double DiscreteFactorGraph::operator()(
+      const DiscreteFactor::Values &values) const {
+    double product = 1.0;
+    BOOST_FOREACH( const sharedFactor& factor, factors_ )
+      product *= (*factor)(values);
+    return product;
+  }
 
-	/* ************************************************************************* */
-	double DiscreteFactorGraph::operator()(
-			const DiscreteFactor::Values &values) const {
-		double product = 1.0;
-		BOOST_FOREACH( const sharedFactor& factor, factors_ )
-			product *= (*factor)(values);
-		return product;
-	}
+  /* ************************************************************************* */
+  void DiscreteFactorGraph::print(const std::string& s,
+      const KeyFormatter& formatter) const {
+    std::cout << s << std::endl;
+    std::cout << "size: " << size() << std::endl;
+    for (size_t i = 0; i < factors_.size(); i++) {
+      std::stringstream ss;
+      ss << "factor " << i << ": ";
+      if (factors_[i] != NULL) factors_[i]->print(ss.str(), formatter);
+    }
+  }
 
-	/* ************************************************************************* */
-	void DiscreteFactorGraph::print(const std::string& s,
-			const IndexFormatter& formatter) const {
-		std::cout << s << std::endl;
-		std::cout << "size: " << size() << std::endl;
-		for (size_t i = 0; i < factors_.size(); i++) {
-			std::stringstream ss;
-			ss << "factor " << i << ": ";
-			if (factors_[i] != NULL) factors_[i]->print(ss.str(), formatter);
-		}
-	}
+//  /* ************************************************************************* */
+//  void DiscreteFactorGraph::permuteWithInverse(
+//    const Permutation& inversePermutation) {
+//      BOOST_FOREACH(const sharedFactor& factor, factors_) {
+//        if(factor)
+//          factor->permuteWithInverse(inversePermutation);
+//      }
+//  }
+//
+//  /* ************************************************************************* */
+//  void DiscreteFactorGraph::reduceWithInverse(
+//    const internal::Reduction& inverseReduction) {
+//      BOOST_FOREACH(const sharedFactor& factor, factors_) {
+//        if(factor)
+//          factor->reduceWithInverse(inverseReduction);
+//      }
+//  }
 
-	/* ************************************************************************* */
-	std::pair<DiscreteConditional::shared_ptr, DecisionTreeFactor::shared_ptr>  //
-	EliminateDiscrete(const FactorGraph<DiscreteFactor>& factors, size_t num) {
+  /* ************************************************************************* */
+  DiscreteFactor::sharedValues DiscreteFactorGraph::optimize() const
+  {
+    gttic(DiscreteFactorGraph_optimize);
+    return BaseEliminateable::eliminateSequential()->optimize();
+  }
 
-		// PRODUCT: multiply all factors
-		tic(1, "product");
-		DecisionTreeFactor product;
-		BOOST_FOREACH(const DiscreteFactor::shared_ptr& factor, factors){
-			product = (*factor) * product;
-		}
+  /* ************************************************************************* */
+  std::pair<DiscreteConditional::shared_ptr, DecisionTreeFactor::shared_ptr>  //
+  EliminateDiscrete(const DiscreteFactorGraph& factors, const Ordering& frontalKeys) {
 
-		toc(1, "product");
+    // PRODUCT: multiply all factors
+    gttic(product);
+    DecisionTreeFactor product;
+    BOOST_FOREACH(const DiscreteFactor::shared_ptr& factor, factors)
+      product = (*factor) * product;
+    gttoc(product);
 
-		// sum out frontals, this is the factor on the separator
-		tic(2, "sum");
-		DecisionTreeFactor::shared_ptr sum = product.sum(num);
-		toc(2, "sum");
+    // sum out frontals, this is the factor on the separator
+    gttic(sum);
+    DecisionTreeFactor::shared_ptr sum = product.sum(frontalKeys);
+    gttoc(sum);
 
-		// now divide product/sum to get conditional
-		tic(3, "divide");
-		DiscreteConditional::shared_ptr cond(new DiscreteConditional(product, *sum));
-		toc(3, "divide");
-		tictoc_finishedIteration();
+    // Ordering keys for the conditional so that frontalKeys are really in front
+    Ordering orderedKeys;
+    orderedKeys.insert(orderedKeys.end(), frontalKeys.begin(), frontalKeys.end());
+    orderedKeys.insert(orderedKeys.end(), sum->keys().begin(), sum->keys().end());
 
-		return std::make_pair(cond, sum);
-	}
+    // now divide product/sum to get conditional
+    gttic(divide);
+    DiscreteConditional::shared_ptr cond(new DiscreteConditional(product, *sum, orderedKeys));
+    gttoc(divide);
 
+    return std::make_pair(cond, sum);
+  }
 
 /* ************************************************************************* */
 } // namespace

@@ -16,22 +16,24 @@
  * @date Feb 7, 2012
  */
 
+#include <CppUnitLite/TestHarness.h>
+
+#if 0
+
 #include <tests/smallExample.h>
 //#include <gtsam/slam/AntiFactor.h>
-#include <gtsam/slam/BearingFactor.h>
-#include <gtsam/slam/BearingRangeFactor.h>
+#include <gtsam/sam/BearingRangeFactor.h>
 #include <gtsam/slam/BetweenFactor.h>
 //#include <gtsam/slam/BoundingConstraint.h>
 #include <gtsam/slam/GeneralSFMFactor.h>
 //#include <gtsam/slam/PartialPriorFactor.h>
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/ProjectionFactor.h>
-#include <gtsam/slam/RangeFactor.h>
+#include <gtsam/sam/RangeFactor.h>
 #include <gtsam/slam/StereoFactor.h>
 #include <gtsam/nonlinear/NonlinearEquality.h>
-#include <gtsam/nonlinear/Symbol.h>
+#include <gtsam/inference/Symbol.h>
 #include <gtsam/linear/GaussianISAM.h>
-#include <gtsam/linear/GaussianMultifrontalSolver.h>
 #include <gtsam/base/LieVector.h>
 #include <gtsam/base/LieMatrix.h>
 #include <gtsam/geometry/Point2.h>
@@ -49,7 +51,6 @@
 #include <gtsam/geometry/StereoCamera.h>
 
 #include <gtsam/base/serializationTestHelpers.h>
-#include <CppUnitLite/TestHarness.h>
 
 using namespace std;
 using namespace gtsam;
@@ -104,9 +105,6 @@ typedef RangeFactor<SimpleCamera, Point3>               RangeFactorSimpleCameraP
 typedef RangeFactor<CalibratedCamera, CalibratedCamera> RangeFactorCalibratedCamera;
 typedef RangeFactor<SimpleCamera, SimpleCamera>         RangeFactorSimpleCamera;
 
-typedef BearingFactor<Pose2, Point2, Rot2> BearingFactor2D;
-typedef BearingFactor<Pose3, Point3, Rot3> BearingFactor3D;
-
 typedef BearingRangeFactor<Pose2, Point2>  BearingRangeFactor2D;
 typedef BearingRangeFactor<Pose3, Point3>  BearingRangeFactor3D;
 
@@ -133,28 +131,34 @@ BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Diagonal, "gtsam_noiseModel_Diagonal"
 BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Gaussian, "gtsam_noiseModel_Gaussian");
 BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Unit, "gtsam_noiseModel_Unit");
 BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Isotropic, "gtsam_noiseModel_Isotropic");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::Robust, "gtsam_noiseModel_Robust");
+
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::mEstimator::Base , "gtsam_noiseModel_mEstimator_Base");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::mEstimator::Null , "gtsam_noiseModel_mEstimator_Null");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::mEstimator::Fair , "gtsam_noiseModel_mEstimator_Fair");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::mEstimator::Huber, "gtsam_noiseModel_mEstimator_Huber");
+BOOST_CLASS_EXPORT_GUID(gtsam::noiseModel::mEstimator::Tukey, "gtsam_noiseModel_mEstimator_Tukey");
 
 BOOST_CLASS_EXPORT_GUID(gtsam::SharedNoiseModel, "gtsam_SharedNoiseModel");
 BOOST_CLASS_EXPORT_GUID(gtsam::SharedDiagonal, "gtsam_SharedDiagonal");
 
 /* Create GUIDs for geometry */
 /* ************************************************************************* */
-BOOST_CLASS_EXPORT(gtsam::LieVector);
-BOOST_CLASS_EXPORT(gtsam::LieMatrix);
-BOOST_CLASS_EXPORT(gtsam::Point2);
-BOOST_CLASS_EXPORT(gtsam::StereoPoint2);
-BOOST_CLASS_EXPORT(gtsam::Point3);
-BOOST_CLASS_EXPORT(gtsam::Rot2);
-BOOST_CLASS_EXPORT(gtsam::Rot3);
-BOOST_CLASS_EXPORT(gtsam::Pose2);
-BOOST_CLASS_EXPORT(gtsam::Pose3);
-BOOST_CLASS_EXPORT(gtsam::Cal3_S2);
-BOOST_CLASS_EXPORT(gtsam::Cal3DS2);
-BOOST_CLASS_EXPORT(gtsam::Cal3_S2Stereo);
-BOOST_CLASS_EXPORT(gtsam::CalibratedCamera);
-BOOST_CLASS_EXPORT(gtsam::SimpleCamera);
-BOOST_CLASS_EXPORT(gtsam::StereoCamera);
-
+GTSAM_VALUE_EXPORT(gtsam::LieVector);
+GTSAM_VALUE_EXPORT(gtsam::LieMatrix);
+GTSAM_VALUE_EXPORT(gtsam::Point2);
+GTSAM_VALUE_EXPORT(gtsam::StereoPoint2);
+GTSAM_VALUE_EXPORT(gtsam::Point3);
+GTSAM_VALUE_EXPORT(gtsam::Rot2);
+GTSAM_VALUE_EXPORT(gtsam::Rot3);
+GTSAM_VALUE_EXPORT(gtsam::Pose2);
+GTSAM_VALUE_EXPORT(gtsam::Pose3);
+GTSAM_VALUE_EXPORT(gtsam::Cal3_S2);
+GTSAM_VALUE_EXPORT(gtsam::Cal3DS2);
+GTSAM_VALUE_EXPORT(gtsam::Cal3_S2Stereo);
+GTSAM_VALUE_EXPORT(gtsam::CalibratedCamera);
+GTSAM_VALUE_EXPORT(gtsam::SimpleCamera);
+GTSAM_VALUE_EXPORT(gtsam::StereoCamera);
 
 /* Create GUIDs for factors */
 /* ************************************************************************* */
@@ -209,8 +213,6 @@ BOOST_CLASS_EXPORT_GUID(RangeFactorSimpleCameraPoint, "gtsam::RangeFactorSimpleC
 BOOST_CLASS_EXPORT_GUID(RangeFactorCalibratedCamera, "gtsam::RangeFactorCalibratedCamera");
 BOOST_CLASS_EXPORT_GUID(RangeFactorSimpleCamera, "gtsam::RangeFactorSimpleCamera");
 
-BOOST_CLASS_EXPORT_GUID(BearingFactor2D, "gtsam::BearingFactor2D");
-
 BOOST_CLASS_EXPORT_GUID(BearingRangeFactor2D, "gtsam::BearingRangeFactor2D");
 
 BOOST_CLASS_EXPORT_GUID(GenericProjectionFactorCal3_S2, "gtsam::GenericProjectionFactorCal3_S2");
@@ -225,33 +227,35 @@ BOOST_CLASS_EXPORT_GUID(GenericStereoFactor3D, "gtsam::GenericStereoFactor3D");
 
 
 /* ************************************************************************* */
-TEST (Serialization, smallExample_linear) {
+TEST (testSerializationSLAM, smallExample_linear) {
   using namespace example;
 
   Ordering ordering; ordering += X(1),X(2),L(1);
-  GaussianFactorGraph fg = createGaussianFactorGraph(ordering);
   EXPECT(equalsObj(ordering));
   EXPECT(equalsXML(ordering));
+  EXPECT(equalsBinary(ordering));
 
+  GaussianFactorGraph fg = createGaussianFactorGraph();
   EXPECT(equalsObj(fg));
   EXPECT(equalsXML(fg));
+  EXPECT(equalsBinary(fg));
 
   GaussianBayesNet cbn = createSmallGaussianBayesNet();
   EXPECT(equalsObj(cbn));
   EXPECT(equalsXML(cbn));
+  EXPECT(equalsBinary(cbn));
 }
 
 /* ************************************************************************* */
-TEST (Serialization, gaussianISAM) {
+TEST (testSerializationSLAM, gaussianISAM) {
   using namespace example;
-  Ordering ordering;
-  GaussianFactorGraph smoother;
-  boost::tie(smoother, ordering) = createSmoother(7);
-  BayesTree<GaussianConditional> bayesTree = *GaussianMultifrontalSolver(smoother).eliminate();
+  GaussianFactorGraph smoother = createSmoother(7);
+  GaussianBayesTree bayesTree = *smoother.eliminateMultifrontal();
   GaussianISAM isam(bayesTree);
 
   EXPECT(equalsObj(isam));
   EXPECT(equalsXML(isam));
+  EXPECT(equalsBinary(isam));
 }
 
 /* ************************************************************************* */
@@ -261,22 +265,24 @@ BOOST_CLASS_EXPORT_GUID(simulated2D::Odometry,    "gtsam::simulated2D::Odometry"
 BOOST_CLASS_EXPORT_GUID(simulated2D::Measurement, "gtsam::simulated2D::Measurement")
 
 /* ************************************************************************* */
-TEST (Serialization, smallExample_nonlinear) {
+TEST (testSerializationSLAM, smallExample_nonlinear) {
   using namespace example;
   NonlinearFactorGraph nfg = createNonlinearFactorGraph();
   Values c1 = createValues();
   EXPECT(equalsObj(nfg));
   EXPECT(equalsXML(nfg));
+  EXPECT(equalsBinary(nfg));
 
   EXPECT(equalsObj(c1));
   EXPECT(equalsXML(c1));
+  EXPECT(equalsBinary(c1));
 }
 
 /* ************************************************************************* */
-TEST (Serialization, factors) {
+TEST (testSerializationSLAM, factors) {
 
-  LieVector lieVector(4, 1.0, 2.0, 3.0, 4.0);
-  LieMatrix lieMatrix(2, 3, 1.0, 2.0, 3.0, 4.0, 5.0 ,6.0);
+  LieVector lieVector((Vector(4) << 1.0, 2.0, 3.0, 4.0).finished());
+  LieMatrix lieMatrix((Matrix(2, 3) << 1.0, 2.0, 3.0, 4.0, 5.0 ,6.0).finished());
   Point2 point2(1.0, 2.0);
   StereoPoint2 stereoPoint2(1.0, 2.0, 3.0);
   Point3 point3(1.0, 2.0, 3.0);
@@ -292,28 +298,28 @@ TEST (Serialization, factors) {
   StereoCamera stereoCamera(pose3, boost::make_shared<Cal3_S2Stereo>(cal3_s2stereo));
 
 
-	Symbol  a01('a',1),  a02('a',2),  a03('a',3),  a04('a',4),  a05('a',5),
-	        a06('a',6),  a07('a',7),  a08('a',8),  a09('a',9),  a10('a',10),
-	        a11('a',11), a12('a',12), a13('a',13), a14('a',14), a15('a',15);
-	Symbol  b01('b',1),  b02('b',2),  b03('b',3),  b04('b',4),  b05('b',5),
-	        b06('b',6),  b07('b',7),  b08('b',8),  b09('b',9),  b10('b',10),
-	        b11('b',11), b12('b',12), b13('b',13), b14('b',14), b15('b',15);
+  Symbol  a01('a',1),  a02('a',2),  a03('a',3),  a04('a',4),  a05('a',5),
+          a06('a',6),  a07('a',7),  a08('a',8),  a09('a',9),  a10('a',10),
+          a11('a',11), a12('a',12), a13('a',13), a14('a',14), a15('a',15);
+  Symbol  b01('b',1),  b02('b',2),  b03('b',3),  b04('b',4),  b05('b',5),
+          b06('b',6),  b07('b',7),  b08('b',8),  b09('b',9),  b10('b',10),
+          b11('b',11), b12('b',12), b13('b',13), b14('b',14), b15('b',15);
 
   Values values;
-	values.insert(a01, lieVector);
-	values.insert(a02, lieMatrix);
-	values.insert(a03, point2);
-	values.insert(a04, stereoPoint2);
-	values.insert(a05, point3);
-	values.insert(a06, rot2);
-	values.insert(a07, rot3);
-	values.insert(a08, pose2);
-	values.insert(a09, pose3);
-	values.insert(a10, cal3_s2);
-	values.insert(a11, cal3ds2);
-	values.insert(a12, calibratedCamera);
-	values.insert(a13, simpleCamera);
-	values.insert(a14, stereoCamera);
+  values.insert(a01, lieVector);
+  values.insert(a02, lieMatrix);
+  values.insert(a03, point2);
+  values.insert(a04, stereoPoint2);
+  values.insert(a05, point3);
+  values.insert(a06, rot2);
+  values.insert(a07, rot3);
+  values.insert(a08, pose2);
+  values.insert(a09, pose3);
+  values.insert(a10, cal3_s2);
+  values.insert(a11, cal3ds2);
+  values.insert(a12, calibratedCamera);
+  values.insert(a13, simpleCamera);
+  values.insert(a14, stereoCamera);
 
 
   SharedNoiseModel model1 = noiseModel::Isotropic::Sigma(1, 0.3);
@@ -325,7 +331,13 @@ TEST (Serialization, factors) {
   SharedNoiseModel model9 = noiseModel::Isotropic::Sigma(9, 0.3);
   SharedNoiseModel model11 = noiseModel::Isotropic::Sigma(11, 0.3);
 
+  SharedNoiseModel robust1 = noiseModel::Robust::Create(
+      noiseModel::mEstimator::Huber::Create(10.0, noiseModel::mEstimator::Huber::Scalar),
+      noiseModel::Unit::Create(2));
 
+  EXPECT(equalsDereferenced(robust1));
+  EXPECT(equalsDereferencedXML(robust1));
+  EXPECT(equalsDereferencedBinary(robust1));
 
   PriorFactorLieVector priorFactorLieVector(a01, lieVector, model4);
   PriorFactorLieMatrix priorFactorLieMatrix(a02, lieMatrix, model6);
@@ -375,8 +387,6 @@ TEST (Serialization, factors) {
   RangeFactorCalibratedCamera rangeFactorCalibratedCamera(a12, b12, 2.0, model1);
   RangeFactorSimpleCamera rangeFactorSimpleCamera(a13, b13, 2.0, model1);
 
-  BearingFactor2D bearingFactor2D(a08, a03, rot2, model1);
-
   BearingRangeFactor2D bearingRangeFactor2D(a08, a03, rot2, 2.0, model2);
 
   GenericProjectionFactorCal3_S2 genericProjectionFactorCal3_S2(point2, model2, a09, a05, boost::make_shared<Cal3_S2>(cal3_s2));
@@ -390,66 +400,64 @@ TEST (Serialization, factors) {
 
 
   NonlinearFactorGraph graph;
-  graph.add(priorFactorLieVector);
-  graph.add(priorFactorLieMatrix);
-  graph.add(priorFactorPoint2);
-  graph.add(priorFactorStereoPoint2);
-  graph.add(priorFactorPoint3);
-  graph.add(priorFactorRot2);
-  graph.add(priorFactorRot3);
-  graph.add(priorFactorPose2);
-  graph.add(priorFactorPose3);
-  graph.add(priorFactorCal3_S2);
-  graph.add(priorFactorCal3DS2);
-  graph.add(priorFactorCalibratedCamera);
-  graph.add(priorFactorSimpleCamera);
-  graph.add(priorFactorStereoCamera);
+  graph += priorFactorLieVector;
+  graph += priorFactorLieMatrix;
+  graph += priorFactorPoint2;
+  graph += priorFactorStereoPoint2;
+  graph += priorFactorPoint3;
+  graph += priorFactorRot2;
+  graph += priorFactorRot3;
+  graph += priorFactorPose2;
+  graph += priorFactorPose3;
+  graph += priorFactorCal3_S2;
+  graph += priorFactorCal3DS2;
+  graph += priorFactorCalibratedCamera;
+  graph += priorFactorSimpleCamera;
+  graph += priorFactorStereoCamera;
 
-  graph.add(betweenFactorLieVector);
-  graph.add(betweenFactorLieMatrix);
-  graph.add(betweenFactorPoint2);
-  graph.add(betweenFactorPoint3);
-  graph.add(betweenFactorRot2);
-  graph.add(betweenFactorRot3);
-  graph.add(betweenFactorPose2);
-  graph.add(betweenFactorPose3);
+  graph += betweenFactorLieVector;
+  graph += betweenFactorLieMatrix;
+  graph += betweenFactorPoint2;
+  graph += betweenFactorPoint3;
+  graph += betweenFactorRot2;
+  graph += betweenFactorRot3;
+  graph += betweenFactorPose2;
+  graph += betweenFactorPose3;
 
-  graph.add(nonlinearEqualityLieVector);
-  graph.add(nonlinearEqualityLieMatrix);
-  graph.add(nonlinearEqualityPoint2);
-  graph.add(nonlinearEqualityStereoPoint2);
-  graph.add(nonlinearEqualityPoint3);
-  graph.add(nonlinearEqualityRot2);
-  graph.add(nonlinearEqualityRot3);
-  graph.add(nonlinearEqualityPose2);
-  graph.add(nonlinearEqualityPose3);
-  graph.add(nonlinearEqualityCal3_S2);
-  graph.add(nonlinearEqualityCal3DS2);
-  graph.add(nonlinearEqualityCalibratedCamera);
-  graph.add(nonlinearEqualitySimpleCamera);
-  graph.add(nonlinearEqualityStereoCamera);
+  graph += nonlinearEqualityLieVector;
+  graph += nonlinearEqualityLieMatrix;
+  graph += nonlinearEqualityPoint2;
+  graph += nonlinearEqualityStereoPoint2;
+  graph += nonlinearEqualityPoint3;
+  graph += nonlinearEqualityRot2;
+  graph += nonlinearEqualityRot3;
+  graph += nonlinearEqualityPose2;
+  graph += nonlinearEqualityPose3;
+  graph += nonlinearEqualityCal3_S2;
+  graph += nonlinearEqualityCal3DS2;
+  graph += nonlinearEqualityCalibratedCamera;
+  graph += nonlinearEqualitySimpleCamera;
+  graph += nonlinearEqualityStereoCamera;
 
-  graph.add(rangeFactorPosePoint2);
-  graph.add(rangeFactorPosePoint3);
-  graph.add(rangeFactorPose2);
-  graph.add(rangeFactorPose3);
-  graph.add(rangeFactorCalibratedCameraPoint);
-  graph.add(rangeFactorSimpleCameraPoint);
-  graph.add(rangeFactorCalibratedCamera);
-  graph.add(rangeFactorSimpleCamera);
+  graph += rangeFactorPosePoint2;
+  graph += rangeFactorPosePoint3;
+  graph += rangeFactorPose2;
+  graph += rangeFactorPose3;
+  graph += rangeFactorCalibratedCameraPoint;
+  graph += rangeFactorSimpleCameraPoint;
+  graph += rangeFactorCalibratedCamera;
+  graph += rangeFactorSimpleCamera;
 
-  graph.add(bearingFactor2D);
+  graph += bearingRangeFactor2D;
 
-  graph.add(bearingRangeFactor2D);
+  graph += genericProjectionFactorCal3_S2;
+  graph += genericProjectionFactorCal3DS2;
 
-  graph.add(genericProjectionFactorCal3_S2);
-  graph.add(genericProjectionFactorCal3DS2);
+  graph += generalSFMFactorCal3_S2;
 
-  graph.add(generalSFMFactorCal3_S2);
+  graph += generalSFMFactor2Cal3_S2;
 
-  graph.add(generalSFMFactor2Cal3_S2);
-
-  graph.add(genericStereoFactor3D);
+  graph += genericStereoFactor3D;
 
 
   // text
@@ -505,8 +513,6 @@ TEST (Serialization, factors) {
   EXPECT(equalsObj<RangeFactorSimpleCameraPoint>(rangeFactorSimpleCameraPoint));
   EXPECT(equalsObj<RangeFactorCalibratedCamera>(rangeFactorCalibratedCamera));
   EXPECT(equalsObj<RangeFactorSimpleCamera>(rangeFactorSimpleCamera));
-
-  EXPECT(equalsObj<BearingFactor2D>(bearingFactor2D));
 
   EXPECT(equalsObj<BearingRangeFactor2D>(bearingRangeFactor2D));
 
@@ -574,8 +580,6 @@ TEST (Serialization, factors) {
   EXPECT(equalsXML<RangeFactorCalibratedCamera>(rangeFactorCalibratedCamera));
   EXPECT(equalsXML<RangeFactorSimpleCamera>(rangeFactorSimpleCamera));
 
-  EXPECT(equalsXML<BearingFactor2D>(bearingFactor2D));
-
   EXPECT(equalsXML<BearingRangeFactor2D>(bearingRangeFactor2D));
 
   EXPECT(equalsXML<GenericProjectionFactorCal3_S2>(genericProjectionFactorCal3_S2));
@@ -586,8 +590,75 @@ TEST (Serialization, factors) {
   EXPECT(equalsXML<GeneralSFMFactor2Cal3_S2>(generalSFMFactor2Cal3_S2));
 
   EXPECT(equalsXML<GenericStereoFactor3D>(genericStereoFactor3D));
+
+
+  // binary
+  EXPECT(equalsBinary<Symbol>(a01));
+  EXPECT(equalsBinary<Symbol>(b02));
+  EXPECT(equalsBinary<Values>(values));
+  EXPECT(equalsBinary<NonlinearFactorGraph>(graph));
+
+  EXPECT(equalsBinary<PriorFactorLieVector>(priorFactorLieVector));
+  EXPECT(equalsBinary<PriorFactorLieMatrix>(priorFactorLieMatrix));
+  EXPECT(equalsBinary<PriorFactorPoint2>(priorFactorPoint2));
+  EXPECT(equalsBinary<PriorFactorStereoPoint2>(priorFactorStereoPoint2));
+  EXPECT(equalsBinary<PriorFactorPoint3>(priorFactorPoint3));
+  EXPECT(equalsBinary<PriorFactorRot2>(priorFactorRot2));
+  EXPECT(equalsBinary<PriorFactorRot3>(priorFactorRot3));
+  EXPECT(equalsBinary<PriorFactorPose2>(priorFactorPose2));
+  EXPECT(equalsBinary<PriorFactorPose3>(priorFactorPose3));
+  EXPECT(equalsBinary<PriorFactorCal3_S2>(priorFactorCal3_S2));
+  EXPECT(equalsBinary<PriorFactorCal3DS2>(priorFactorCal3DS2));
+  EXPECT(equalsBinary<PriorFactorCalibratedCamera>(priorFactorCalibratedCamera));
+  EXPECT(equalsBinary<PriorFactorSimpleCamera>(priorFactorSimpleCamera));
+  EXPECT(equalsBinary<PriorFactorStereoCamera>(priorFactorStereoCamera));
+
+  EXPECT(equalsBinary<BetweenFactorLieVector>(betweenFactorLieVector));
+  EXPECT(equalsBinary<BetweenFactorLieMatrix>(betweenFactorLieMatrix));
+  EXPECT(equalsBinary<BetweenFactorPoint2>(betweenFactorPoint2));
+  EXPECT(equalsBinary<BetweenFactorPoint3>(betweenFactorPoint3));
+  EXPECT(equalsBinary<BetweenFactorRot2>(betweenFactorRot2));
+  EXPECT(equalsBinary<BetweenFactorRot3>(betweenFactorRot3));
+  EXPECT(equalsBinary<BetweenFactorPose2>(betweenFactorPose2));
+  EXPECT(equalsBinary<BetweenFactorPose3>(betweenFactorPose3));
+
+  EXPECT(equalsBinary<NonlinearEqualityLieVector>(nonlinearEqualityLieVector));
+  EXPECT(equalsBinary<NonlinearEqualityLieMatrix>(nonlinearEqualityLieMatrix));
+  EXPECT(equalsBinary<NonlinearEqualityPoint2>(nonlinearEqualityPoint2));
+  EXPECT(equalsBinary<NonlinearEqualityStereoPoint2>(nonlinearEqualityStereoPoint2));
+  EXPECT(equalsBinary<NonlinearEqualityPoint3>(nonlinearEqualityPoint3));
+  EXPECT(equalsBinary<NonlinearEqualityRot2>(nonlinearEqualityRot2));
+  EXPECT(equalsBinary<NonlinearEqualityRot3>(nonlinearEqualityRot3));
+  EXPECT(equalsBinary<NonlinearEqualityPose2>(nonlinearEqualityPose2));
+  EXPECT(equalsBinary<NonlinearEqualityPose3>(nonlinearEqualityPose3));
+  EXPECT(equalsBinary<NonlinearEqualityCal3_S2>(nonlinearEqualityCal3_S2));
+  EXPECT(equalsBinary<NonlinearEqualityCal3DS2>(nonlinearEqualityCal3DS2));
+  EXPECT(equalsBinary<NonlinearEqualityCalibratedCamera>(nonlinearEqualityCalibratedCamera));
+  EXPECT(equalsBinary<NonlinearEqualitySimpleCamera>(nonlinearEqualitySimpleCamera));
+  EXPECT(equalsBinary<NonlinearEqualityStereoCamera>(nonlinearEqualityStereoCamera));
+
+  EXPECT(equalsBinary<RangeFactorPosePoint2>(rangeFactorPosePoint2));
+  EXPECT(equalsBinary<RangeFactorPosePoint3>(rangeFactorPosePoint3));
+  EXPECT(equalsBinary<RangeFactorPose2>(rangeFactorPose2));
+  EXPECT(equalsBinary<RangeFactorPose3>(rangeFactorPose3));
+  EXPECT(equalsBinary<RangeFactorCalibratedCameraPoint>(rangeFactorCalibratedCameraPoint));
+  EXPECT(equalsBinary<RangeFactorSimpleCameraPoint>(rangeFactorSimpleCameraPoint));
+  EXPECT(equalsBinary<RangeFactorCalibratedCamera>(rangeFactorCalibratedCamera));
+  EXPECT(equalsBinary<RangeFactorSimpleCamera>(rangeFactorSimpleCamera));
+
+  EXPECT(equalsBinary<BearingRangeFactor2D>(bearingRangeFactor2D));
+
+  EXPECT(equalsBinary<GenericProjectionFactorCal3_S2>(genericProjectionFactorCal3_S2));
+  EXPECT(equalsBinary<GenericProjectionFactorCal3DS2>(genericProjectionFactorCal3DS2));
+
+  EXPECT(equalsBinary<GeneralSFMFactorCal3_S2>(generalSFMFactorCal3_S2));
+
+  EXPECT(equalsBinary<GeneralSFMFactor2Cal3_S2>(generalSFMFactor2Cal3_S2));
+
+  EXPECT(equalsBinary<GenericStereoFactor3D>(genericStereoFactor3D));
 }
 
+#endif
 
 /* ************************************************************************* */
 int main() { TestResult tr; return TestRegistry::runAllTests(tr); }

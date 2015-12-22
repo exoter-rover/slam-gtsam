@@ -18,8 +18,7 @@
 #include <gtsam/nonlinear/NonlinearISAM.h>
 
 #include <gtsam/linear/GaussianFactorGraph.h>
-#include <gtsam/inference/ISAM-inl.h>
-#include <gtsam/nonlinear/Ordering.h>
+#include <gtsam/inference/Ordering.h>
 
 #include <boost/foreach.hpp>
 
@@ -32,12 +31,11 @@ namespace gtsam {
 
 /* ************************************************************************* */
 void NonlinearISAM::saveGraph(const string& s, const KeyFormatter& keyFormatter) const {
-  isam_.saveGraph(s, OrderingIndexFormatter(ordering_, keyFormatter));
+  isam_.saveGraph(s, keyFormatter);
 }
 
 /* ************************************************************************* */
-void NonlinearISAM::update(const NonlinearFactorGraph& newFactors,
-		const Values& initialValues) {
+void NonlinearISAM::update(const NonlinearFactorGraph& newFactors, const Values& initialValues) {
 
   if(newFactors.size() > 0) {
 
@@ -53,17 +51,10 @@ void NonlinearISAM::update(const NonlinearFactorGraph& newFactors,
     // TODO: optimize for whole config?
     linPoint_.insert(initialValues);
 
-    // Augment ordering
-    // TODO: allow for ordering constraints within the new variables
-    // FIXME: should just loop over new values
-    BOOST_FOREACH(const NonlinearFactorGraph::sharedFactor& factor, newFactors)
-      BOOST_FOREACH(Key key, factor->keys())
-        ordering_.tryInsert(key, ordering_.nVars()); // will do nothing if already present
-
-    boost::shared_ptr<GaussianFactorGraph> linearizedNewFactors = newFactors.linearize(linPoint_, ordering_);
+    boost::shared_ptr<GaussianFactorGraph> linearizedNewFactors = newFactors.linearize(linPoint_);
 
     // Update ISAM
-    isam_.update(*linearizedNewFactors);
+    isam_.update(*linearizedNewFactors, eliminationFunction_);
   }
 }
 
@@ -78,16 +69,10 @@ void NonlinearISAM::reorder_relinearize() {
 
     isam_.clear();
 
-    // Compute an ordering
-    // TODO: allow for constrained ordering here
-    ordering_ = *factors_.orderingCOLAMD(newLinPoint);
-
-    // Create a linear factor graph at the new linearization point
-    // TODO: decouple relinearization and reordering to avoid
-    boost::shared_ptr<GaussianFactorGraph> gfg = factors_.linearize(newLinPoint, ordering_);
-
     // Just recreate the whole BayesTree
-    isam_.update(*gfg);
+    // TODO: allow for constrained ordering here
+    // TODO: decouple relinearization and reordering to avoid
+    isam_.update(*factors_.linearize(newLinPoint), eliminationFunction_);
 
     // Update linearization point
     linPoint_ = newLinPoint;
@@ -97,23 +82,22 @@ void NonlinearISAM::reorder_relinearize() {
 /* ************************************************************************* */
 Values NonlinearISAM::estimate() const {
   if(isam_.size() > 0)
-    return linPoint_.retract(optimize(isam_), ordering_);
+    return linPoint_.retract(isam_.optimize());
   else
     return linPoint_;
 }
 
 /* ************************************************************************* */
 Matrix NonlinearISAM::marginalCovariance(Key key) const {
-	return isam_.marginalCovariance(ordering_[key]);
+  return isam_.marginalCovariance(key);
 }
 
 /* ************************************************************************* */
 void NonlinearISAM::print(const string& s, const KeyFormatter& keyFormatter) const {
-	cout << s << "ReorderInterval: " << reorderInterval_ << " Current Count: " << reorderCounter_ << endl;
-	isam_.print("GaussianISAM:\n");
-	linPoint_.print("Linearization Point:\n", keyFormatter);
-	ordering_.print("System Ordering:\n", keyFormatter);
-	factors_.print("Nonlinear Graph:\n", keyFormatter);
+  cout << s << "ReorderInterval: " << reorderInterval_ << " Current Count: " << reorderCounter_ << endl;
+  isam_.print("GaussianISAM:\n");
+  linPoint_.print("Linearization Point:\n", keyFormatter);
+  factors_.print("Nonlinear Graph:\n", keyFormatter);
 }
 
 /* ************************************************************************* */

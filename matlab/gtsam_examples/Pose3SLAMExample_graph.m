@@ -12,6 +12,8 @@
 
 import gtsam.*
 
+%% PLEASE NOTE THAT PLOTTING TAKES A VERY LONG TIME HERE
+
 %% Find data file
 N = 2500;
 % dataset = 'sphere_smallnoise.graph';
@@ -21,12 +23,12 @@ dataset = 'sphere2500.txt';
 datafile = findExampleDataFile(dataset);
 
 %% Initialize graph, initial estimate, and odometry noise
-model = noiseModel.Diagonal.Sigmas([0.05; 0.05; 0.05; 5*pi/180; 5*pi/180; 5*pi/180]);
+model = noiseModel.Diagonal.Sigmas([5*pi/180; 5*pi/180; 5*pi/180; 0.05; 0.05; 0.05]);
 [graph,initial]=load3D(datafile,model,true,N);
 
 %% Plot Initial Estimate
 cla
-first = initial.at(0);
+first = initial.atPose3(0);
 plot3(first.x(),first.y(),first.z(),'r*'); hold on
 plot3DTrajectory(initial,'g-',false);
 drawnow;

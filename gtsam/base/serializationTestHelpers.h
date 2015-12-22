@@ -12,6 +12,7 @@
 /**
  * @file serializationTestHelpers.h
  * @brief 
+ * @author Alex Cunningham
  * @author Richard Roberts
  * @date Feb 7, 2012
  */
@@ -21,44 +22,14 @@
 #include <sstream>
 #include <string>
 
-// includes for standard serialization types
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/optional.hpp>
-#include <boost/serialization/shared_ptr.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/map.hpp>
-#include <boost/serialization/list.hpp>
-#include <boost/serialization/deque.hpp>
-#include <boost/serialization/weak_ptr.hpp>
-
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/xml_iarchive.hpp>
-#include <boost/archive/xml_oarchive.hpp>
+#include <gtsam/base/serialization.h>
 
 // whether to print the serialized text to stdout
 const bool verbose = false;
 
-namespace gtsam { namespace serializationTestHelpers {
+namespace gtsam {
+namespace serializationTestHelpers {
 
-  /* ************************************************************************* */
-  // Serialization testing code.
-  /* ************************************************************************* */
-
-template<class T>
-std::string serialize(const T& input) {
-  std::ostringstream out_archive_stream;
-  boost::archive::text_oarchive out_archive(out_archive_stream);
-  out_archive << input;
-  return out_archive_stream.str();
-}
-
-template<class T>
-void deserialize(const std::string& serialized, T& output) {
-  std::istringstream in_archive_stream(serialized);
-  boost::archive::text_iarchive in_archive(in_archive_stream);
-  in_archive >> output;
-}
 
 // Templated round-trip serialization
 template<class T>
@@ -78,36 +49,20 @@ bool equality(const T& input = T()) {
   return input==output;
 }
 
-// This version requires equals
+// This version requires Testable
 template<class T>
 bool equalsObj(const T& input = T()) {
   T output;
   roundtrip<T>(input,output);
-  return input.equals(output);
+  return assert_equal(input, output);
 }
 
-// De-referenced version for pointers
+// De-referenced version for pointers, requires equals method
 template<class T>
 bool equalsDereferenced(const T& input) {
   T output;
   roundtrip<T>(input,output);
   return input->equals(*output);
-}
-
-/* ************************************************************************* */
-template<class T>
-std::string serializeXML(const T& input) {
-  std::ostringstream out_archive_stream;
-  boost::archive::xml_oarchive out_archive(out_archive_stream);
-  out_archive << boost::serialization::make_nvp("data", input);
-  return out_archive_stream.str();
-}
-
-template<class T>
-void deserializeXML(const std::string& serialized, T& output) {
-  std::istringstream in_archive_stream(serialized);
-  boost::archive::xml_iarchive in_archive(in_archive_stream);
-  in_archive >> boost::serialization::make_nvp("data", output);
 }
 
 // Templated round-trip serialization using XML
@@ -129,15 +84,15 @@ bool equalityXML(const T& input = T()) {
   return input==output;
 }
 
-// This version requires equals
+// This version requires Testable
 template<class T>
 bool equalsXML(const T& input = T()) {
   T output;
   roundtripXML<T>(input,output);
-  return input.equals(output);
+  return assert_equal(input, output);
 }
 
-// This version is for pointers
+// This version is for pointers, requires equals method
 template<class T>
 bool equalsDereferencedXML(const T& input = T()) {
   T output;
@@ -145,4 +100,41 @@ bool equalsDereferencedXML(const T& input = T()) {
   return input->equals(*output);
 }
 
-} }
+// Templated round-trip serialization using XML
+template<class T>
+void roundtripBinary(const T& input, T& output) {
+  // Serialize
+  std::string serialized = serializeBinary<T>(input);
+  if (verbose) std::cout << serialized << std::endl << std::endl;
+
+  // De-serialize
+  deserializeBinary(serialized, output);
+}
+
+// This version requires equality operator
+template<class T>
+bool equalityBinary(const T& input = T()) {
+  T output;
+  roundtripBinary<T>(input,output);
+  return input==output;
+}
+
+// This version requires Testable
+template<class T>
+bool equalsBinary(const T& input = T()) {
+  T output;
+  roundtripBinary<T>(input,output);
+  return assert_equal(input, output);
+}
+
+// This version is for pointers, requires equals method
+template<class T>
+bool equalsDereferencedBinary(const T& input = T()) {
+  T output;
+  roundtripBinary<T>(input,output);
+  return input->equals(*output);
+}
+
+} // \namespace serializationTestHelpers
+} // \namespace gtsam
+

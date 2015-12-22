@@ -17,7 +17,7 @@
  */
 
 #include <gtsam/base/FastMap.h>
-#include <gtsam/base/types.h>
+#include <gtsam/global_includes.h>
 #include <string>
 
 
@@ -42,7 +42,11 @@
 #endif
 
 namespace gtsam {
-  extern FastMap<std::string, ValueWithDefault<bool,false> > debugFlags;
+  GTSAM_EXTERN_EXPORT FastMap<std::string, ValueWithDefault<bool,false> > debugFlags;
+
+  // Non-guarded use led to crashes, and solved in commit cd35db2
+  bool GTSAM_EXPORT guardedIsDebug(const std::string& s);
+  void GTSAM_EXPORT guardedSetDebug(const std::string& s, const bool v);
 }
 
 #undef ISDEBUG
@@ -50,8 +54,8 @@ namespace gtsam {
 
 #ifdef GTSAM_ENABLE_DEBUG
 
-#define ISDEBUG(S) (gtsam::debugFlags[S])
-#define SETDEBUG(S,V) ((void)(gtsam::debugFlags[S] = (V)))
+#define ISDEBUG(S) (gtsam::guardedIsDebug(S))
+#define SETDEBUG(S,V) ((void)(gtsam::guardedSetDebug(S,V)))
 
 #else
 

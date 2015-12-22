@@ -18,59 +18,60 @@
 // \callgraph
 #pragma once
 
-#include <gtsam/inference/BayesTree.h>
+#include <gtsam/global_includes.h>
 
 namespace gtsam {
 
-	/**
-	 * A Bayes tree with an update methods that implements the iSAM algorithm.
-	 * Given a set of new factors, it re-eliminates the invalidated part of the tree.
-	 * \nosubgrouping
-	 */
-	template<class CONDITIONAL>
-	class ISAM: public BayesTree<CONDITIONAL> {
+  /**
+   * A Bayes tree with an update methods that implements the iSAM algorithm.
+   * Given a set of new factors, it re-eliminates the invalidated part of the tree.
+   * \nosubgrouping
+   */
+  template<class BAYESTREE>
+  class ISAM: public BAYESTREE
+  {
+  public:
 
-	private:
+    typedef BAYESTREE Base;
+    typedef typename Base::BayesNetType BayesNetType;
+    typedef typename Base::FactorGraphType FactorGraphType;
+    typedef typename Base::Clique Clique;
+    typedef typename Base::sharedClique sharedClique;
+    typedef typename Base::Cliques Cliques;
 
-		typedef BayesTree<CONDITIONAL> Base;
+  private:
 
-	public:
+    typedef typename Base::Eliminate Eliminate;
+    typedef typename Base::EliminationTraitsType EliminationTraitsType;
 
-		/// @name Standard Constructors
-		/// @{
+  public:
 
-		/** Create an empty Bayes Tree */
-		ISAM();
+    /// @name Standard Constructors
+    /// @{
 
-		/** Copy constructor */
-		ISAM(const Base& bayesTree) :
-				Base(bayesTree) {
-		}
+    /** Create an empty Bayes Tree */
+    ISAM() {}
 
-		/// @}
-		/// @name Advanced Interface Interface
-		/// @{
+    /** Copy constructor */
+    ISAM(const Base& bayesTree) : Base(bayesTree) {}
 
-		/**
-		 * update the Bayes tree with a set of new factors, typically derived from measurements
-		 * @param newFactors is a factor graph that contains the new factors
-		 * @param function an elimination routine
-		 */
-		template<class FG>
-		void update(const FG& newFactors, typename FG::Eliminate function);
+    /// @}
+    /// @name Advanced Interface Interface
+    /// @{
 
-		typedef typename BayesTree<CONDITIONAL>::sharedClique sharedClique;	///<TODO: comment
-		typedef typename BayesTree<CONDITIONAL>::Cliques Cliques;						///<TODO: comment
+    /**
+     * update the Bayes tree with a set of new factors, typically derived from measurements
+     * @param newFactors is a factor graph that contains the new factors
+     * @param function an elimination routine
+     */
+    void update(const FactorGraphType& newFactors, const Eliminate& function = EliminationTraitsType::DefaultEliminate);
 
-		/** update_internal provides access to list of orphans for drawing purposes */
-		template<class FG>
-		void update_internal(const FG& newFactors, Cliques& orphans,
-				typename FG::Eliminate function);
+    /** update_internal provides access to list of orphans for drawing purposes */
+    void update_internal(const FactorGraphType& newFactors, Cliques& orphans,
+      const Eliminate& function = EliminationTraitsType::DefaultEliminate);
 
-		/// @}
+    /// @}
 
-	};
+  };
 
 }/// namespace gtsam
-
-#include <gtsam/inference/ISAM-inl.h>

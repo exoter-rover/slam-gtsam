@@ -23,50 +23,49 @@
 
 namespace gtsam {
 
-	/**
-	 * A Gaussian density.
-	 *
-	 * It is implemented as a GaussianConditional without parents.
-	 * The negative log-probability is given by \f$ |Rx - d|^2 \f$
-	 * with \f$ \Lambda = \Sigma^{-1} = R^T R \f$ and \f$ \mu = R^{-1} d \f$
-	 */
-	class GaussianDensity: public GaussianConditional {
+  /**
+  * A Gaussian density.
+  *
+  * It is implemented as a GaussianConditional without parents.
+  * The negative log-probability is given by \f$ |Rx - d|^2 \f$
+  * with \f$ \Lambda = \Sigma^{-1} = R^T R \f$ and \f$ \mu = R^{-1} d \f$
+  */
+  class GTSAM_EXPORT GaussianDensity : public GaussianConditional {
 
-	public:
+  public:
 
-		typedef boost::shared_ptr<GaussianDensity> shared_ptr;
+    typedef boost::shared_ptr<GaussianDensity> shared_ptr;
 
-		/// default constructor needed for serialization
-		GaussianDensity() :
-				GaussianConditional() {
-		}
+    /// default constructor needed for serialization
+    GaussianDensity() :
+      GaussianConditional() {
+    }
 
-		/// Copy constructor from GaussianConditional
-		GaussianDensity(const GaussianConditional& conditional) :
-				GaussianConditional(conditional) {
-			assert(conditional.nrParents() == 0);
-		}
+    /// Copy constructor from GaussianConditional
+    GaussianDensity(const GaussianConditional& conditional) :
+      GaussianConditional(conditional) {
+        if(conditional.nrParents() != 0)
+          throw std::invalid_argument("GaussianDensity can only be created from a conditional with no parents");
+    }
 
-		/// constructor using d, R
-		GaussianDensity(Index key, const Vector& d, const Matrix& R,
-				const Vector& sigmas) :
-				GaussianConditional(key, d, R, sigmas) {
-		}
+    /// constructor using d, R
+    GaussianDensity(Key key, const Vector& d, const Matrix& R, const SharedDiagonal& noiseModel = SharedDiagonal()) :
+      GaussianConditional(key, d, R, noiseModel) {}
 
-		/// print
-		void print(const std::string& = "GaussianDensity",
-				const IndexFormatter& formatter =DefaultIndexFormatter) const;
+    /// Construct using a mean and variance
+    static GaussianDensity FromMeanAndStddev(Key key, const Vector& mean, const double& sigma);
 
-		/// Mean \f$ \mu = R^{-1} d \f$
-		Vector mean() const;
+    /// print
+    void print(const std::string& = "GaussianDensity",
+      const KeyFormatter& formatter = DefaultKeyFormatter) const;
 
-		/// Information matrix \f$ \Lambda = R^T R \f$
-		Matrix information() const;
+    /// Mean \f$ \mu = R^{-1} d \f$
+    Vector mean() const;
 
-		/// Covariance matrix \f$ \Sigma = (R^T R)^{-1} \f$
-		Matrix covariance() const;
+    /// Covariance matrix \f$ \Sigma = (R^T R)^{-1} \f$
+    Matrix covariance() const;
 
-	};
-// GaussianDensity
+  };
+  // GaussianDensity
 
 }// gtsam

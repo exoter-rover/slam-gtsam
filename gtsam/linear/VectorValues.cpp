@@ -16,190 +16,344 @@
  * @author Alex Cunningham
  */
 
-#include <gtsam/base/FastVector.h>
-#include <gtsam/inference/Permutation.h>
 #include <gtsam/linear/VectorValues.h>
+
+#include <boost/foreach.hpp>
+#include <boost/bind.hpp>
+#include <boost/range/combine.hpp>
+#include <boost/range/numeric.hpp>
+#include <boost/range/adaptor/transformed.hpp>
+#include <boost/range/adaptor/map.hpp>
 
 using namespace std;
 
 namespace gtsam {
 
-/* ************************************************************************* */
-VectorValues::VectorValues(const VectorValues& other) {
-  *this = other;
-}
+  using boost::combine;
+  using boost::adaptors::transformed;
+  using boost::adaptors::map_values;
+  using boost::accumulate;
 
-/* ************************************************************************* */
-VectorValues& VectorValues::operator=(const VectorValues& rhs) {
-  if(this != &rhs) {
-    resizeLike(rhs);        // Copy structure
-    values_ = rhs.values_;  // Copy values
+  /* ************************************************************************* */
+  VectorValues::VectorValues(const VectorValues& first, const VectorValues& second)
+  {
+    // Merge using predicate for comparing first of pair
+    merge(first.begin(), first.end(), second.begin(), second.end(), inserter(values_, values_.end()),
+      boost::bind(&less<Key>::operator(), less<Key>(), boost::bind(&KeyValuePair::first, _1), boost::bind(&KeyValuePair::first, _2)));
+    if(size() != first.size() + second.size())
+      throw invalid_argument("Requested to merge two VectorValues that have one or more variables in common.");
   }
-  return *this;
-}
 
-/* ************************************************************************* */
-VectorValues VectorValues::Zero(const VectorValues& x) {
-	VectorValues cloned(SameStructure(x));
-	cloned.setZero();
-	return cloned;
-}
-
-/* ************************************************************************* */
-vector<size_t> VectorValues::dims() const {
-  std::vector<size_t> result(this->size());
-	for(Index j = 0; j < this->size(); ++j)
-		result[j] = this->dim(j);
-	return result;
-}
-
-/* ************************************************************************* */
-void VectorValues::insert(Index j, const Vector& value) {
-  // Make sure j does not already exist
-  if(exists(j))
-    throw invalid_argument("VectorValues: requested variable index to insert already exists.");
-
-  // Get vector of dimensions
-  FastVector<size_t> dimensions(size());
-  for(size_t k=0; k<maps_.size(); ++k)
-    dimensions[k] = maps_[k].rows();
-
-  // If this adds variables at the end, insert zero-length entries up to j
-  if(j >= size())
-    dimensions.insert(dimensions.end(), j+1-size(), 0);
-
-  // Set correct dimension for j
-  dimensions[j] = value.rows();
-
-  // Make a copy to make assignment easier
-  VectorValues original(*this);
-
-  // Resize to accomodate new variable
-  resize(dimensions);
-
-  // Copy original variables
-  for(Index k = 0; k < original.size(); ++k)
-    if(k != j && exists(k))
-      operator[](k) = original[k];
-
-  // Copy new variable
-  operator[](j) = value;
-}
-
-/* ************************************************************************* */
-void VectorValues::print(const std::string& str, const IndexFormatter& formatter) const {
-	std::cout << str << ": " << size() << " elements\n";
-	for (Index var = 0; var < size(); ++var)
-		std::cout << "  " << formatter(var) << ": \n" << operator[](var) << "\n";
-	std::cout.flush();
-}
-
-/* ************************************************************************* */
-bool VectorValues::equals(const VectorValues& x, double tol) const {
-	return hasSameStructure(x) && equal_with_abs_tol(values_, x.values_, tol);
-}
-
-/* ************************************************************************* */
-void VectorValues::resize(Index nVars, size_t varDim) {
-  maps_.clear();
-  maps_.reserve(nVars);
-  values_.resize(nVars * varDim);
-	int varStart = 0;
-	for (Index j = 0; j < nVars; ++j) {
-		maps_.push_back(values_.segment(varStart, varDim));
-		varStart += varDim;
-	}
-}
-
-/* ************************************************************************* */
-void VectorValues::resizeLike(const VectorValues& other) {
-  values_.resize(other.dim());
-  // Create SubVectors referencing our values_ vector
-  maps_.clear();
-  maps_.reserve(other.size());
-  int varStart = 0;
-  BOOST_FOREACH(const SubVector& value, other) {
-    maps_.push_back(values_.segment(varStart, value.rows()));
-    varStart += value.rows();
+  /* ************************************************************************* */
+  VectorValues::VectorValues(const Vector& x, const Dims& dims) {
+    typedef pair<Key, size_t> Pair;
+    size_t j = 0;
+    BOOST_FOREACH(const Pair& v, dims) {
+      Key key;
+      size_t n;
+      boost::tie(key, n) = v;
+      values_.insert(make_pair(key, sub(x, j, j + n)));
+      j += n;
+    }
   }
-}
 
-/* ************************************************************************* */
-VectorValues VectorValues::SameStructure(const VectorValues& other) {
-  VectorValues ret;
-  ret.resizeLike(other);
-  return ret;
-}
+  /* ************************************************************************* */
+  VectorValues VectorValues::Zero(const VectorValues& other)
+  {
+    VectorValues result;
+    BOOST_FOREACH(const KeyValuePair& v, other)
+      result.values_.insert(make_pair(v.first, Vector::Zero(v.second.size())));
+    return result;
+  }
 
-/* ************************************************************************* */
-VectorValues VectorValues::Zero(Index nVars, size_t varDim) {
-  VectorValues ret(nVars, varDim);
-  ret.setZero();
-  return ret;
-}
+  /* ************************************************************************* */
+  VectorValues::iterator VectorValues::insert(const std::pair<Key, Vector>& key_value) {
+    // Note that here we accept a pair with a reference to the Vector, but the Vector is copied as
+    // it is inserted into the values_ map.
+    std::pair<iterator, bool> result = values_.insert(key_value);
+    if(!result.second)
+      throw std::invalid_argument(
+      "Requested to insert variable '" + DefaultKeyFormatter(key_value.first)
+      + "' already in this VectorValues.");
+    return result.first;
+  }
 
-/* ************************************************************************* */
-void VectorValues::setZero() {
-  values_.setZero();
-}
+  /* ************************************************************************* */
+  void VectorValues::update(const VectorValues& values)
+  {
+    iterator hint = begin();
+    BOOST_FOREACH(const KeyValuePair& key_value, values)
+    {
+      // Use this trick to find the value using a hint, since we are inserting from another sorted map
+      size_t oldSize = values_.size();
+      hint = values_.insert(hint, key_value);
+      if(values_.size() > oldSize) {
+        values_.unsafe_erase(hint);
+        throw out_of_range("Requested to update a VectorValues with another VectorValues that contains keys not present in the first.");
+      } else {
+        hint->second = key_value.second;
+      }
+    }
+  }
 
-/* ************************************************************************* */
-bool VectorValues::hasSameStructure(const VectorValues& other) const {
-  if(this->size() != other.size())
-    return false;
-  for(size_t j=0; j<size(); ++j)
-    if(this->dim(j) != other.dim(j))
+  /* ************************************************************************* */
+  void VectorValues::insert(const VectorValues& values)
+  {
+    size_t originalSize = size();
+    values_.insert(values.begin(), values.end());
+    if(size() != originalSize + values.size())
+      throw invalid_argument("Requested to insert a VectorValues into another VectorValues that already contains one or more of its keys.");
+  }
+
+  /* ************************************************************************* */
+  void VectorValues::setZero()
+  {
+    BOOST_FOREACH(Vector& v, values_ | map_values)
+      v.setZero();
+  }
+
+  /* ************************************************************************* */
+  void VectorValues::print(const string& str, const KeyFormatter& formatter) const {
+    cout << str << ": " << size() << " elements\n";
+    BOOST_FOREACH(const value_type& key_value, *this)
+      cout << "  " << formatter(key_value.first) << ": " << key_value.second.transpose() << "\n";
+    cout.flush();
+  }
+
+  /* ************************************************************************* */
+  bool VectorValues::equals(const VectorValues& x, double tol) const {
+    if(this->size() != x.size())
       return false;
-  return true;
-}
+    typedef boost::tuple<value_type, value_type> ValuePair;
+    BOOST_FOREACH(const ValuePair& values, boost::combine(*this, x)) {
+      if(values.get<0>().first != values.get<1>().first ||
+        !equal_with_abs_tol(values.get<0>().second, values.get<1>().second, tol))
+        return false;
+    }
+    return true;
+  }
 
-/* ************************************************************************* */
-VectorValues VectorValues::operator+(const VectorValues& c) const {
-	assert(this->hasSameStructure(c));
-	VectorValues result(SameStructure(c));
-	result.values_ = this->values_ + c.values_;
-	return result;
-}
+  /* ************************************************************************* */
+  Vector VectorValues::vector() const
+  {
+    // Count dimensions
+    DenseIndex totalDim = 0;
+    BOOST_FOREACH(const Vector& v, *this | map_values)
+      totalDim += v.size();
 
-/* ************************************************************************* */
-VectorValues VectorValues::operator-(const VectorValues& c) const {
-  assert(this->hasSameStructure(c));
-  VectorValues result(SameStructure(c));
-  result.values_ = this->values_ - c.values_;
-  return result;
-}
+    // Copy vectors
+    Vector result(totalDim);
+    DenseIndex pos = 0;
+    BOOST_FOREACH(const Vector& v, *this | map_values) {
+      result.segment(pos, v.size()) = v;
+      pos += v.size();
+    }
 
-/* ************************************************************************* */
-void VectorValues::operator+=(const VectorValues& c) {
-	assert(this->hasSameStructure(c));
-	this->values_ += c.values_;
-}
+    return result;
+  }
 
-/* ************************************************************************* */
-VectorValues VectorValues::permute(const Permutation& permutation) const {
-	// Create result and allocate space
-	VectorValues lhs;
-	lhs.values_.resize(this->dim());
-	lhs.maps_.reserve(this->size());
+  /* ************************************************************************* */
+  Vector VectorValues::vector(const FastVector<Key>& keys) const
+  {
+    // Count dimensions and collect pointers to avoid double lookups
+    DenseIndex totalDim = 0;
+    FastVector<const Vector*> items(keys.size());
+    for(size_t i = 0; i < keys.size(); ++i) {
+      items[i] = &at(keys[i]);
+      totalDim += items[i]->size();
+    }
 
-	// Copy values from this VectorValues to the permuted VectorValues
-	size_t lhsPos = 0;
-	for(size_t i = 0; i < this->size(); ++i) {
-		// Map the next LHS subvector to the next slice of the LHS vector
-		lhs.maps_.push_back(SubVector(lhs.values_, lhsPos, this->at(permutation[i]).size()));
-		// Copy the data from the RHS subvector to the LHS subvector
-		lhs.maps_[i] = this->at(permutation[i]);
-		// Increment lhs position
-		lhsPos += lhs.maps_[i].size();
-	}
+    // Copy vectors
+    Vector result(totalDim);
+    DenseIndex pos = 0;
+    BOOST_FOREACH(const Vector *v, items) {
+      result.segment(pos, v->size()) = *v;
+      pos += v->size();
+    }
 
-	return lhs;
-}
+    return result;
+  }
 
-/* ************************************************************************* */
-void VectorValues::swap(VectorValues& other) {
-	this->values_.swap(other.values_);
-	this->maps_.swap(other.maps_);
-}
+  /* ************************************************************************* */
+  Vector VectorValues::vector(const Dims& keys) const
+  {
+    // Count dimensions
+    DenseIndex totalDim = 0;
+    BOOST_FOREACH(size_t dim, keys | map_values)
+      totalDim += dim;
+    Vector result(totalDim);
+    size_t j = 0;
+    BOOST_FOREACH(const Dims::value_type& it, keys) {
+      result.segment(j,it.second) = at(it.first);
+      j += it.second;
+    }
+    return result;
+  }
 
-}
+  /* ************************************************************************* */
+  void VectorValues::swap(VectorValues& other) {
+    this->values_.swap(other.values_);
+  }
+
+  /* ************************************************************************* */
+  namespace internal
+  {
+    bool structureCompareOp(const boost::tuple<VectorValues::value_type,
+      VectorValues::value_type>& vv)
+    {
+      return vv.get<0>().first == vv.get<1>().first
+        && vv.get<0>().second.size() == vv.get<1>().second.size();
+    }
+  }
+
+  /* ************************************************************************* */
+  bool VectorValues::hasSameStructure(const VectorValues other) const
+  {
+    return accumulate(combine(*this, other)
+      | transformed(internal::structureCompareOp), true, logical_and<bool>());
+  }
+
+  /* ************************************************************************* */
+  double VectorValues::dot(const VectorValues& v) const
+  {
+    if(this->size() != v.size())
+      throw invalid_argument("VectorValues::dot called with a VectorValues of different structure");
+    double result = 0.0;
+    typedef boost::tuple<value_type, value_type> ValuePair;
+    using boost::adaptors::map_values;
+    BOOST_FOREACH(const ValuePair& values, boost::combine(*this, v)) {
+      assert_throw(values.get<0>().first == values.get<1>().first,
+        invalid_argument("VectorValues::dot called with a VectorValues of different structure"));
+      assert_throw(values.get<0>().second.size() == values.get<1>().second.size(),
+        invalid_argument("VectorValues::dot called with a VectorValues of different structure"));
+      result += values.get<0>().second.dot(values.get<1>().second);
+    }
+    return result;
+  }
+
+  /* ************************************************************************* */
+  double VectorValues::norm() const {
+    return std::sqrt(this->squaredNorm());
+  }
+
+  /* ************************************************************************* */
+  double VectorValues::squaredNorm() const {
+    double sumSquares = 0.0;
+    using boost::adaptors::map_values;
+    BOOST_FOREACH(const Vector& v, *this | map_values)
+      sumSquares += v.squaredNorm();
+    return sumSquares;
+  }
+
+  /* ************************************************************************* */
+  VectorValues VectorValues::operator+(const VectorValues& c) const
+  {
+    if(this->size() != c.size())
+      throw invalid_argument("VectorValues::operator+ called with different vector sizes");
+    assert_throw(hasSameStructure(c),
+      invalid_argument("VectorValues::operator+ called with different vector sizes"));
+
+    VectorValues result;
+    // The result.end() hint here should result in constant-time inserts
+    for(const_iterator j1 = begin(), j2 = c.begin(); j1 != end(); ++j1, ++j2)
+      result.values_.insert(result.end(), make_pair(j1->first, j1->second + j2->second));
+
+    return result;
+  }
+
+  /* ************************************************************************* */
+  VectorValues VectorValues::add(const VectorValues& c) const
+  {
+    return *this + c;
+  }
+
+  /* ************************************************************************* */
+  VectorValues& VectorValues::operator+=(const VectorValues& c)
+  {
+    if(this->size() != c.size())
+      throw invalid_argument("VectorValues::operator+= called with different vector sizes");
+    assert_throw(hasSameStructure(c),
+      invalid_argument("VectorValues::operator+= called with different vector sizes"));
+
+    iterator j1 = begin();
+    const_iterator j2 = c.begin();
+    // The result.end() hint here should result in constant-time inserts
+    for(; j1 != end(); ++j1, ++j2)
+      j1->second += j2->second;
+
+    return *this;
+  }
+
+  /* ************************************************************************* */
+  VectorValues& VectorValues::addInPlace(const VectorValues& c)
+  {
+    return *this += c;
+  }
+
+  /* ************************************************************************* */
+  VectorValues& VectorValues::addInPlace_(const VectorValues& c)
+  {
+    for(const_iterator j2 = c.begin(); j2 != c.end(); ++j2) {
+      pair<VectorValues::iterator, bool> xi = tryInsert(j2->first, Vector());
+      if(xi.second)
+        xi.first->second = j2->second;
+      else
+        xi.first->second += j2->second;
+    }
+    return *this;
+  }
+
+  /* ************************************************************************* */
+  VectorValues VectorValues::operator-(const VectorValues& c) const
+  {
+    if(this->size() != c.size())
+      throw invalid_argument("VectorValues::operator- called with different vector sizes");
+    assert_throw(hasSameStructure(c),
+      invalid_argument("VectorValues::operator- called with different vector sizes"));
+
+    VectorValues result;
+    // The result.end() hint here should result in constant-time inserts
+    for(const_iterator j1 = begin(), j2 = c.begin(); j1 != end(); ++j1, ++j2)
+      result.values_.insert(result.end(), make_pair(j1->first, j1->second - j2->second));
+
+    return result;
+  }
+
+  /* ************************************************************************* */
+  VectorValues VectorValues::subtract(const VectorValues& c) const
+  {
+    return *this - c;
+  }
+
+  /* ************************************************************************* */
+  VectorValues operator*(const double a, const VectorValues &v)
+  {
+    VectorValues result;
+    BOOST_FOREACH(const VectorValues::KeyValuePair& key_v, v)
+      result.values_.insert(result.values_.end(), make_pair(key_v.first, a * key_v.second));
+    return result;
+  }
+
+  /* ************************************************************************* */
+  VectorValues VectorValues::scale(const double a) const
+  {
+    return a * *this;
+  }
+
+  /* ************************************************************************* */
+  VectorValues& VectorValues::operator*=(double alpha)
+  {
+    BOOST_FOREACH(Vector& v, *this | map_values)
+      v *= alpha;
+    return *this;
+  }
+
+  /* ************************************************************************* */
+  VectorValues& VectorValues::scaleInPlace(double alpha)
+  {
+    return *this *= alpha;
+  }
+
+  /* ************************************************************************* */
+
+} // \namespace gtsam

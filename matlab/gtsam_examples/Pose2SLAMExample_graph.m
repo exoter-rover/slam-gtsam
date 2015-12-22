@@ -13,7 +13,7 @@
 import gtsam.*
 
 %% Find data file
-datafile = findExampleDataFile('w100-odom.graph');
+datafile = findExampleDataFile('w100.graph');
 
 %% Initialize graph, initial estimate, and odometry noise
 model = noiseModel.Diagonal.Sigmas([0.05; 0.05; 5*pi/180]);
@@ -36,10 +36,12 @@ toc
 hold on; plot2DTrajectory(result, 'b-*');
 
 %% Plot Covariance Ellipses
+tic
 marginals = Marginals(graph, result);
+toc
 P={};
 for i=1:result.size()-1
-    pose_i = result.at(i);
+    pose_i = result.atPose2(i);
     P{i}=marginals.marginalCovariance(i);
     plotPose2(pose_i,'b',P{i})
 end

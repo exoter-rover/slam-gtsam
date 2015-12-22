@@ -13,12 +13,12 @@
  * @file    DoglegOptimizer.h
  * @brief   
  * @author  Richard Roberts
- * @date 	Feb 26, 2012
+ * @date   Feb 26, 2012
  */
 
 #pragma once
 
-#include <gtsam/nonlinear/SuccessiveLinearizationOptimizer.h>
+#include <gtsam/nonlinear/NonlinearOptimizer.h>
 
 namespace gtsam {
 
@@ -29,7 +29,7 @@ class DoglegOptimizer;
  * common to all nonlinear optimization algorithms.  This class also contains
  * all of those parameters.
  */
-class DoglegParams : public SuccessiveLinearizationParams {
+class GTSAM_EXPORT DoglegParams : public NonlinearOptimizerParams {
 public:
   /** See DoglegParams::dlVerbosity */
   enum VerbosityDL {
@@ -46,26 +46,26 @@ public:
   virtual ~DoglegParams() {}
 
   virtual void print(const std::string& str = "") const {
-    SuccessiveLinearizationParams::print(str);
+    NonlinearOptimizerParams::print(str);
     std::cout << "               deltaInitial: " << deltaInitial << "\n";
     std::cout.flush();
   }
 
-	double getDeltaInitial() const { return deltaInitial; }
-	std::string getVerbosityDL() const { return verbosityDLTranslator(verbosityDL); }
+  double getDeltaInitial() const { return deltaInitial; }
+  std::string getVerbosityDL() const { return verbosityDLTranslator(verbosityDL); }
 
-	void setDeltaInitial(double deltaInitial) { this->deltaInitial = deltaInitial; }
-	void setVerbosityDL(const std::string& verbosityDL) { this->verbosityDL = verbosityDLTranslator(verbosityDL); }
+  void setDeltaInitial(double deltaInitial) { this->deltaInitial = deltaInitial; }
+  void setVerbosityDL(const std::string& verbosityDL) { this->verbosityDL = verbosityDLTranslator(verbosityDL); }
 
 private:
-	VerbosityDL verbosityDLTranslator(const std::string& verbosityDL) const;
-	std::string verbosityDLTranslator(VerbosityDL verbosityDL) const;
+  VerbosityDL verbosityDLTranslator(const std::string& verbosityDL) const;
+  std::string verbosityDLTranslator(VerbosityDL verbosityDL) const;
 };
 
 /**
  * State for DoglegOptimizer
  */
-class DoglegState : public NonlinearOptimizerState {
+class GTSAM_EXPORT DoglegState : public NonlinearOptimizerState {
 public:
   double Delta;
 
@@ -83,11 +83,11 @@ protected:
 /**
  * This class performs Dogleg nonlinear optimization
  */
-class DoglegOptimizer : public NonlinearOptimizer {
+class GTSAM_EXPORT DoglegOptimizer : public NonlinearOptimizer {
 
 protected:
-	DoglegParams params_;
-	DoglegState state_;
+  DoglegParams params_;
+  DoglegState state_;
 
 public:
   typedef boost::shared_ptr<DoglegOptimizer> shared_ptr;
@@ -105,7 +105,7 @@ public:
    */
   DoglegOptimizer(const NonlinearFactorGraph& graph, const Values& initialValues,
       const DoglegParams& params = DoglegParams()) :
-        NonlinearOptimizer(graph), params_(ensureHasOrdering(params, graph, initialValues)), state_(graph, initialValues, params_) {}
+        NonlinearOptimizer(graph), params_(ensureHasOrdering(params, graph)), state_(graph, initialValues, params_) {}
 
   /** Standard constructor, requires a nonlinear factor graph, initial
    * variable assignments, and optimization parameters.  For convenience this
@@ -133,11 +133,17 @@ public:
    */
   virtual void iterate();
 
-  /** Access the parameters */
+  /** Read-only access the parameters */
   const DoglegParams& params() const { return params_; }
 
-  /** Access the last state */
+  /** Read/write access the parameters. */
+  DoglegParams& params() { return params_; }
+
+  /** Read-only access the last state */
   const DoglegState& state() const { return state_; }
+
+  /** Read/write access the last state. When modifying the state, the error, etc. must be consistent before calling iterate() */
+  DoglegState& state() { return state_; }
 
   /** Access the current trust region radius Delta */
   double getDelta() const { return state_.Delta; }
@@ -152,11 +158,7 @@ protected:
   virtual const NonlinearOptimizerState& _state() const { return state_; }
 
   /** Internal function for computing a COLAMD ordering if no ordering is specified */
-  DoglegParams ensureHasOrdering(DoglegParams params, const NonlinearFactorGraph& graph, const Values& values) const {
-    if(!params.ordering)
-      params.ordering = *graph.orderingCOLAMD(values);
-    return params;
-  }
+  DoglegParams ensureHasOrdering(DoglegParams params, const NonlinearFactorGraph& graph) const;
 };
 
 }

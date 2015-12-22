@@ -6,29 +6,38 @@
 %   Permutation                       - class Permutation, see Doxygen page for details
 % 
 %% General Inference Classes
-%   IndexConditional                  - class IndexConditional, see Doxygen page for details
 %   IndexFactor                       - class IndexFactor, see Doxygen page for details
-%   SymbolicBayesNet                  - class SymbolicBayesNet, see Doxygen page for details
-%   SymbolicBayesTree                 - class SymbolicBayesTree, see Doxygen page for details
 %   SymbolicFactorGraph               - class SymbolicFactorGraph, see Doxygen page for details
+%   IndexConditional                  - class IndexConditional, see Doxygen page for details
+%   SymbolicBayesNet                  - class SymbolicBayesNet, see Doxygen page for details
+%   SymbolicBayesTreeClique           - class SymbolicBayesTreeClique, see Doxygen page for details
+%   SymbolicBayesTree                 - class SymbolicBayesTree, see Doxygen page for details
 %   SymbolicMultifrontalSolver        - class SymbolicMultifrontalSolver, see Doxygen page for details
 %   SymbolicSequentialSolver          - class SymbolicSequentialSolver, see Doxygen page for details
 %   VariableIndex                     - class VariableIndex, see Doxygen page for details
 % 
-%% Linear-Gaussian Factor Graphs
+%% Linear-Gaussian Graphical Models
 %   Errors                            - class Errors, see Doxygen page for details
-%   GaussianBayesNet                  - class GaussianBayesNet, see Doxygen page for details
-%   GaussianConditional               - class GaussianConditional, see Doxygen page for details
-%   GaussianDensity                   - class GaussianDensity, see Doxygen page for details
+%   VectorValues                      - class VectorValues, see Doxygen page for details
 %   GaussianFactor                    - class GaussianFactor, see Doxygen page for details
-%   GaussianFactorGraph               - class GaussianFactorGraph, see Doxygen page for details
-%   GaussianISAM                      - class GaussianISAM, see Doxygen page for details
 %   HessianFactor                     - class HessianFactor, see Doxygen page for details
 %   JacobianFactor                    - class JacobianFactor, see Doxygen page for details
-%   VectorValues                      - class VectorValues, see Doxygen page for details
+%   GaussianFactorGraph               - class GaussianFactorGraph, see Doxygen page for details
+%   GaussianDensity                   - class GaussianDensity, see Doxygen page for details
+%   GaussianConditional               - class GaussianConditional, see Doxygen page for details
+%   GaussianBayesNet                  - class GaussianBayesNet, see Doxygen page for details
+%   GaussianBayesTreeClique           - class GaussianBayesTreeClique, see Doxygen page for details
+%   GaussianBayesTree                 - class GaussianBayesTree, see Doxygen page for details
+%   GaussianISAM                      - class GaussianISAM, see Doxygen page for details
+%   noiseModel.Gaussian               - class noiseModel.Gaussian, see Doxygen page for details
+%   noiseModel.Diagonal               - class noiseModel.Diagonal, see Doxygen page for details
+%   noiseModel.Constrained            - class noiseModel.Constrained, see Doxygen page for details
+%   noiseModel.Isotropic              - class noiseModel.Isotropic, see Doxygen page for details
+%   noiseModel.Unit                   - class noiseModel.Unit, see Doxygen page for details
 % 
 %% Linear Inference
 %   GaussianSequentialSolver          - class GaussianSequentialSolver, see Doxygen page for details
+%   GaussianMultifrontalSolver        - class GaussianMultifrontalSolver, see Doxygen page for details
 %   IterativeOptimizationParameters   - class IterativeOptimizationParameters, see Doxygen page for details
 %   KalmanFilter                      - class KalmanFilter, see Doxygen page for details
 %   SubgraphSolver                    - class SubgraphSolver, see Doxygen page for details
@@ -37,11 +46,14 @@
 %   Sampler                           - class Sampler, see Doxygen page for details
 %
 %% Nonlinear Factor Graphs
-%   NonlinearFactor                   - class NonlinearFactor, see Doxygen page for details
-%   NonlinearFactorGraph              - class NonlinearFactorGraph, see Doxygen page for details
 %   Ordering                          - class Ordering, see Doxygen page for details
 %   Value                             - class Value, see Doxygen page for details
 %   Values                            - class Values, see Doxygen page for details
+%   LieScalar                         - class LieScalar, see Doxygen page for details
+%   LieVector                         - class LieVector, see Doxygen page for details
+%   LieMatrix                         - class LieMatrix, see Doxygen page for details
+%   NonlinearFactor                   - class NonlinearFactor, see Doxygen page for details
+%   NonlinearFactorGraph              - class NonlinearFactorGraph, see Doxygen page for details
 %
 %% Nonlinear Optimization
 %   ConjugateGradientParameters       - class ConjugateGradientParameters, see Doxygen page for details
@@ -49,6 +61,8 @@
 %   DoglegParams                      - class DoglegParams, see Doxygen page for details
 %   GaussNewtonOptimizer              - class GaussNewtonOptimizer, see Doxygen page for details
 %   GaussNewtonParams                 - class GaussNewtonParams, see Doxygen page for details
+%   ISAM2Clique                       - class ISAM2Clique, see Doxygen page for details
+%   ISAM2BayesTree                    - class ISAM2BayesTree, see Doxygen page for details
 %   ISAM2                             - class ISAM2, see Doxygen page for details
 %   ISAM2DoglegParams                 - class ISAM2DoglegParams, see Doxygen page for details
 %   ISAM2GaussNewtonParams            - class ISAM2GaussNewtonParams, see Doxygen page for details
@@ -159,3 +173,20 @@
 %   symbol                            - create a Symbol key
 %   symbolChr                         - get character from a symbol key
 %   symbolIndex                       - get index from a symbol key
+%
+%% Wrapped C++ Convenience Functions for use within MATLAB
+%   utilities.createKeyList           - Create KeyList from indices
+%   utilities.createKeyVector         - Create KeyVector from indices
+%   utilities.createKeySet            - Create KeySet from indices
+%   utilities.extractPoint2           - Extract all Point2 values into a single matrix [x y]
+%   utilities.extractPoint3           - Extract all Point3 values into a single matrix [x y z]
+%   utilities.extractPose2            - Extract all Pose2 values into a single matrix [x y theta]
+%   utilities.allPose3s               - Extract all Pose3 values
+%   utilities.extractPose3            - Extract all Pose3 values into a single matrix [r11 r12 r13 r21 r22 r23 r31 r32 r33 x y z]
+%   utilities.perturbPoint2           - Perturb all Point2 values using normally distributed noise
+%   utilities.perturbPose2            - Perturb all Pose2 values using normally distributed noise
+%   utilities.perturbPoint3           - Perturb all Point3 values using normally distributed noise
+%   utilities.insertBackprojections   - Insert a number of initial point values by backprojecting
+%   utilities.insertProjectionFactors - Insert multiple projection factors for a single pose key
+%   utilities.reprojectionErrors      - Calculate the errors of all projection factors in a graph
+%   utilities.localToWorld            - Convert from local to world coordinates

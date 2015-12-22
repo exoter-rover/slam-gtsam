@@ -27,12 +27,11 @@
 
 #include <gtsam/base/Testable.h>
 #include <gtsam/base/Matrix.h>
-#include <gtsam/base/LieVector.h>
 #include <tests/smallExample.h>
 #include <tests/simulated2D.h>
 #include <gtsam/linear/GaussianFactor.h>
 #include <gtsam/nonlinear/NonlinearFactorGraph.h>
-#include <gtsam/nonlinear/Symbol.h>
+#include <gtsam/inference/Symbol.h>
 
 using namespace std;
 using namespace gtsam;
@@ -47,47 +46,47 @@ typedef boost::shared_ptr<NonlinearFactor > shared_nlf;
 /* ************************************************************************* */
 TEST( NonlinearFactor, equals )
 {
-	SharedNoiseModel sigma(noiseModel::Isotropic::Sigma(2,1.0));
+  SharedNoiseModel sigma(noiseModel::Isotropic::Sigma(2,1.0));
 
-	// create two nonlinear2 factors
-	Point2 z3(0.,-1.);
-	simulated2D::Measurement f0(z3, sigma, X(1),L(1));
+  // create two nonlinear2 factors
+  Point2 z3(0.,-1.);
+  simulated2D::Measurement f0(z3, sigma, X(1),L(1));
 
-	// measurement between x2 and l1
-	Point2 z4(-1.5, -1.);
-	simulated2D::Measurement f1(z4, sigma, X(2),L(1));
+  // measurement between x2 and l1
+  Point2 z4(-1.5, -1.);
+  simulated2D::Measurement f1(z4, sigma, X(2),L(1));
 
-	CHECK(assert_equal(f0,f0));
-	CHECK(f0.equals(f0));
-	CHECK(!f0.equals(f1));
-	CHECK(!f1.equals(f0));
+  CHECK(assert_equal(f0,f0));
+  CHECK(f0.equals(f0));
+  CHECK(!f0.equals(f1));
+  CHECK(!f1.equals(f0));
 }
 
 /* ************************************************************************* */
 TEST( NonlinearFactor, equals2 )
 {
   // create a non linear factor graph
-  Graph fg = createNonlinearFactorGraph();
+  NonlinearFactorGraph fg = createNonlinearFactorGraph();
 
   // get two factors
-  Graph::sharedFactor f0 = fg[0], f1 = fg[1];
+  NonlinearFactorGraph::sharedFactor f0 = fg[0], f1 = fg[1];
 
   CHECK(f0->equals(*f0));
-	CHECK(!f0->equals(*f1));
-	CHECK(!f1->equals(*f0));
+  CHECK(!f0->equals(*f1));
+  CHECK(!f1->equals(*f0));
 }
 
 /* ************************************************************************* */
 TEST( NonlinearFactor, NonlinearFactor )
 {
   // create a non linear factor graph
-  Graph fg = createNonlinearFactorGraph();
+  NonlinearFactorGraph fg = createNonlinearFactorGraph();
 
   // create a values structure for the non linear factor graph
   Values cfg = createNoisyValues();
 
   // get the factor "f1" from the factor graph
-  Graph::sharedFactor factor = fg[0];
+  NonlinearFactorGraph::sharedFactor factor = fg[0];
 
   // calculate the error_vector from the factor "f1"
   // error_vector = [0.1 0.1]
@@ -105,38 +104,38 @@ TEST( NonlinearFactor, NonlinearFactor )
 /* ************************************************************************* */
 TEST( NonlinearFactor, linearize_f1 )
 {
-	Values c = createNoisyValues();
+  Values c = createNoisyValues();
 
   // Grab a non-linear factor
-  Graph nfg = createNonlinearFactorGraph();
-  Graph::sharedFactor nlf = nfg[0];
+  NonlinearFactorGraph nfg = createNonlinearFactorGraph();
+  NonlinearFactorGraph::sharedFactor nlf = nfg[0];
 
   // We linearize at noisy config from SmallExample
-  GaussianFactor::shared_ptr actual = nlf->linearize(c, *c.orderingArbitrary());
+  GaussianFactor::shared_ptr actual = nlf->linearize(c);
 
-  GaussianFactorGraph lfg = createGaussianFactorGraph(*c.orderingArbitrary());
+  GaussianFactorGraph lfg = createGaussianFactorGraph();
   GaussianFactor::shared_ptr expected = lfg[0];
 
   CHECK(assert_equal(*expected,*actual));
 
   // The error |A*dx-b| approximates (h(x0+dx)-z) = -error_vector
   // Hence i.e., b = approximates z-h(x0) = error_vector(x0)
-	//CHECK(assert_equal(nlf->error_vector(c),actual->get_b()));
+  //CHECK(assert_equal(nlf->error_vector(c),actual->get_b()));
 }
 
 /* ************************************************************************* */
 TEST( NonlinearFactor, linearize_f2 )
 {
-	Values c = createNoisyValues();
+  Values c = createNoisyValues();
 
   // Grab a non-linear factor
-  Graph nfg = createNonlinearFactorGraph();
-  Graph::sharedFactor nlf = nfg[1];
+  NonlinearFactorGraph nfg = createNonlinearFactorGraph();
+  NonlinearFactorGraph::sharedFactor nlf = nfg[1];
 
   // We linearize at noisy config from SmallExample
-  GaussianFactor::shared_ptr actual = nlf->linearize(c, *c.orderingArbitrary());
+  GaussianFactor::shared_ptr actual = nlf->linearize(c);
 
-  GaussianFactorGraph lfg = createGaussianFactorGraph(*c.orderingArbitrary());
+  GaussianFactorGraph lfg = createGaussianFactorGraph();
   GaussianFactor::shared_ptr expected = lfg[1];
 
   CHECK(assert_equal(*expected,*actual));
@@ -146,14 +145,14 @@ TEST( NonlinearFactor, linearize_f2 )
 TEST( NonlinearFactor, linearize_f3 )
 {
   // Grab a non-linear factor
-  Graph nfg = createNonlinearFactorGraph();
-  Graph::sharedFactor nlf = nfg[2];
+  NonlinearFactorGraph nfg = createNonlinearFactorGraph();
+  NonlinearFactorGraph::sharedFactor nlf = nfg[2];
 
   // We linearize at noisy config from SmallExample
   Values c = createNoisyValues();
-  GaussianFactor::shared_ptr actual = nlf->linearize(c, *c.orderingArbitrary());
+  GaussianFactor::shared_ptr actual = nlf->linearize(c);
 
-  GaussianFactorGraph lfg = createGaussianFactorGraph(*c.orderingArbitrary());
+  GaussianFactorGraph lfg = createGaussianFactorGraph();
   GaussianFactor::shared_ptr expected = lfg[2];
 
   CHECK(assert_equal(*expected,*actual));
@@ -163,14 +162,14 @@ TEST( NonlinearFactor, linearize_f3 )
 TEST( NonlinearFactor, linearize_f4 )
 {
   // Grab a non-linear factor
-  Graph nfg = createNonlinearFactorGraph();
-  Graph::sharedFactor nlf = nfg[3];
+  NonlinearFactorGraph nfg = createNonlinearFactorGraph();
+  NonlinearFactorGraph::sharedFactor nlf = nfg[3];
 
   // We linearize at noisy config from SmallExample
   Values c = createNoisyValues();
-  GaussianFactor::shared_ptr actual = nlf->linearize(c, *c.orderingArbitrary());
+  GaussianFactor::shared_ptr actual = nlf->linearize(c);
 
-  GaussianFactorGraph lfg = createGaussianFactorGraph(*c.orderingArbitrary());
+  GaussianFactorGraph lfg = createGaussianFactorGraph();
   GaussianFactor::shared_ptr expected = lfg[3];
 
   CHECK(assert_equal(*expected,*actual));
@@ -179,117 +178,114 @@ TEST( NonlinearFactor, linearize_f4 )
 /* ************************************************************************* */
 TEST( NonlinearFactor, size )
 {
-	// create a non linear factor graph
-	Graph fg = createNonlinearFactorGraph();
+  // create a non linear factor graph
+  NonlinearFactorGraph fg = createNonlinearFactorGraph();
 
-	// create a values structure for the non linear factor graph
-	Values cfg = createNoisyValues();
+  // create a values structure for the non linear factor graph
+  Values cfg = createNoisyValues();
 
-	// get some factors from the graph
-	Graph::sharedFactor factor1 = fg[0], factor2 = fg[1],
-			factor3 = fg[2];
+  // get some factors from the graph
+  NonlinearFactorGraph::sharedFactor factor1 = fg[0], factor2 = fg[1],
+      factor3 = fg[2];
 
-	CHECK(factor1->size() == 1);
-	CHECK(factor2->size() == 2);
-	CHECK(factor3->size() == 2);
+  CHECK(factor1->size() == 1);
+  CHECK(factor2->size() == 2);
+  CHECK(factor3->size() == 2);
 }
 
 /* ************************************************************************* */
 TEST( NonlinearFactor, linearize_constraint1 )
 {
-	Vector sigmas = Vector_(2, 0.2, 0.0);
-	SharedDiagonal constraint = noiseModel::Constrained::MixedSigmas(sigmas);
+  SharedDiagonal constraint = noiseModel::Constrained::MixedSigmas(Vector2(0.2,0));
 
-	Point2 mu(1., -1.);
-	Graph::sharedFactor f0(new simulated2D::Prior(mu, constraint, X(1)));
+  Point2 mu(1., -1.);
+  NonlinearFactorGraph::sharedFactor f0(new simulated2D::Prior(mu, constraint, X(1)));
 
-	Values config;
-	config.insert(X(1), Point2(1.0, 2.0));
-	GaussianFactor::shared_ptr actual = f0->linearize(config, *config.orderingArbitrary());
+  Values config;
+  config.insert(X(1), Point2(1.0, 2.0));
+  GaussianFactor::shared_ptr actual = f0->linearize(config);
 
-	// create expected
-	Ordering ord(*config.orderingArbitrary());
-	Vector b = Vector_(2, 0., -3.);
-	JacobianFactor expected(ord[X(1)], Matrix_(2,2, 5.0, 0.0, 0.0, 1.0), b, constraint);
-	CHECK(assert_equal((const GaussianFactor&)expected, *actual));
+  // create expected
+  Vector2 b(0., -3.);
+  JacobianFactor expected(X(1), (Matrix(2, 2) << 5.0, 0.0, 0.0, 1.0).finished(), b,
+    noiseModel::Constrained::MixedSigmas(Vector2(1,0)));
+  CHECK(assert_equal((const GaussianFactor&)expected, *actual));
 }
 
 /* ************************************************************************* */
 TEST( NonlinearFactor, linearize_constraint2 )
 {
-	Vector sigmas = Vector_(2, 0.2, 0.0);
-	SharedDiagonal constraint = noiseModel::Constrained::MixedSigmas(sigmas);
+  SharedDiagonal constraint = noiseModel::Constrained::MixedSigmas(Vector2(0.2,0));
 
-	Point2 z3(1.,-1.);
-	simulated2D::Measurement f0(z3, constraint, X(1),L(1));
+  Point2 z3(1.,-1.);
+  simulated2D::Measurement f0(z3, constraint, X(1),L(1));
 
-	Values config;
-	config.insert(X(1), Point2(1.0, 2.0));
-	config.insert(L(1), Point2(5.0, 4.0));
-	GaussianFactor::shared_ptr actual = f0.linearize(config, *config.orderingArbitrary());
+  Values config;
+  config.insert(X(1), Point2(1.0, 2.0));
+  config.insert(L(1), Point2(5.0, 4.0));
+  GaussianFactor::shared_ptr actual = f0.linearize(config);
 
-	// create expected
-	Ordering ord(*config.orderingArbitrary());
-	Matrix A = Matrix_(2,2, 5.0, 0.0, 0.0, 1.0);
-	Vector b = Vector_(2, -15., -3.);
-	JacobianFactor expected(ord[X(1)], -1*A, ord[L(1)], A, b, constraint);
-	CHECK(assert_equal((const GaussianFactor&)expected, *actual));
+  // create expected
+  Matrix2 A; A << 5.0, 0.0, 0.0, 1.0;
+  Vector2 b(-15., -3.);
+  JacobianFactor expected(X(1), -1*A, L(1), A, b,
+    noiseModel::Constrained::MixedSigmas(Vector2(1,0)));
+  CHECK(assert_equal((const GaussianFactor&)expected, *actual));
 }
 
 /* ************************************************************************* */
-class TestFactor4 : public NoiseModelFactor4<LieVector, LieVector, LieVector, LieVector> {
+class TestFactor4 : public NoiseModelFactor4<double, double, double, double> {
 public:
-  typedef NoiseModelFactor4<LieVector, LieVector, LieVector, LieVector> Base;
-  TestFactor4() : Base(noiseModel::Diagonal::Sigmas(Vector_(1, 2.0)), X(1), X(2), X(3), X(4)) {}
+  typedef NoiseModelFactor4<double, double, double, double> Base;
+  TestFactor4() : Base(noiseModel::Diagonal::Sigmas((Vector(1) << 2.0).finished()), X(1), X(2), X(3), X(4)) {}
 
   virtual Vector
-    evaluateError(const LieVector& x1, const LieVector& x2, const LieVector& x3, const LieVector& x4,
+    evaluateError(const double& x1, const double& x2, const double& x3, const double& x4,
         boost::optional<Matrix&> H1 = boost::none,
         boost::optional<Matrix&> H2 = boost::none,
         boost::optional<Matrix&> H3 = boost::none,
         boost::optional<Matrix&> H4 = boost::none) const {
     if(H1) {
-      *H1 = Matrix_(1,1, 1.0);
-      *H2 = Matrix_(1,1, 2.0);
-      *H3 = Matrix_(1,1, 3.0);
-      *H4 = Matrix_(1,1, 4.0);
+      *H1 = (Matrix(1, 1) << 1.0).finished();
+      *H2 = (Matrix(1, 1) << 2.0).finished();
+      *H3 = (Matrix(1, 1) << 3.0).finished();
+      *H4 = (Matrix(1, 1) << 4.0).finished();
     }
     return (Vector(1) << x1 + x2 + x3 + x4).finished();
   }
 
-	virtual gtsam::NonlinearFactor::shared_ptr clone() const {
-	  return boost::static_pointer_cast<gtsam::NonlinearFactor>(
-	      gtsam::NonlinearFactor::shared_ptr(new TestFactor4(*this))); }
+  virtual gtsam::NonlinearFactor::shared_ptr clone() const {
+    return boost::static_pointer_cast<gtsam::NonlinearFactor>(
+        gtsam::NonlinearFactor::shared_ptr(new TestFactor4(*this))); }
 };
 
 /* ************************************ */
 TEST(NonlinearFactor, NoiseModelFactor4) {
   TestFactor4 tf;
   Values tv;
-  tv.insert(X(1), LieVector(1, 1.0));
-  tv.insert(X(2), LieVector(1, 2.0));
-  tv.insert(X(3), LieVector(1, 3.0));
-  tv.insert(X(4), LieVector(1, 4.0));
-  EXPECT(assert_equal(Vector_(1, 10.0), tf.unwhitenedError(tv)));
+  tv.insert(X(1), double((1.0)));
+  tv.insert(X(2), double((2.0)));
+  tv.insert(X(3), double((3.0)));
+  tv.insert(X(4), double((4.0)));
+  EXPECT(assert_equal((Vector(1) << 10.0).finished(), tf.unwhitenedError(tv)));
   DOUBLES_EQUAL(25.0/2.0, tf.error(tv), 1e-9);
-  Ordering ordering; ordering += X(1), X(2), X(3), X(4);
-  JacobianFactor jf(*boost::dynamic_pointer_cast<JacobianFactor>(tf.linearize(tv, ordering)));
-  LONGS_EQUAL(jf.keys()[0], 0);
-  LONGS_EQUAL(jf.keys()[1], 1);
-  LONGS_EQUAL(jf.keys()[2], 2);
-  LONGS_EQUAL(jf.keys()[3], 3);
-  EXPECT(assert_equal(Matrix_(1,1, 0.5), jf.getA(jf.begin())));
-  EXPECT(assert_equal(Matrix_(1,1, 1.0), jf.getA(jf.begin()+1)));
-  EXPECT(assert_equal(Matrix_(1,1, 1.5), jf.getA(jf.begin()+2)));
-  EXPECT(assert_equal(Matrix_(1,1, 2.0), jf.getA(jf.begin()+3)));
-  EXPECT(assert_equal(Vector_(1, -5.0), jf.getb()));
+  JacobianFactor jf(*boost::dynamic_pointer_cast<JacobianFactor>(tf.linearize(tv)));
+  LONGS_EQUAL((long)X(1), (long)jf.keys()[0]);
+  LONGS_EQUAL((long)X(2), (long)jf.keys()[1]);
+  LONGS_EQUAL((long)X(3), (long)jf.keys()[2]);
+  LONGS_EQUAL((long)X(4), (long)jf.keys()[3]);
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 0.5).finished(), jf.getA(jf.begin())));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 1.0).finished(), jf.getA(jf.begin()+1)));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 1.5).finished(), jf.getA(jf.begin()+2)));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 2.0).finished(), jf.getA(jf.begin()+3)));
+  EXPECT(assert_equal((Vector)(Vector(1) << -5.0).finished(), jf.getb()));
 }
 
 /* ************************************************************************* */
-class TestFactor5 : public NoiseModelFactor5<LieVector, LieVector, LieVector, LieVector, LieVector> {
+class TestFactor5 : public NoiseModelFactor5<double, double, double, double, double> {
 public:
-  typedef NoiseModelFactor5<LieVector, LieVector, LieVector, LieVector, LieVector> Base;
-  TestFactor5() : Base(noiseModel::Diagonal::Sigmas(Vector_(1, 2.0)), X(1), X(2), X(3), X(4), X(5)) {}
+  typedef NoiseModelFactor5<double, double, double, double, double> Base;
+  TestFactor5() : Base(noiseModel::Diagonal::Sigmas((Vector(1) << 2.0).finished()), X(1), X(2), X(3), X(4), X(5)) {}
 
   virtual Vector
     evaluateError(const X1& x1, const X2& x2, const X3& x3, const X4& x4, const X5& x5,
@@ -299,11 +295,11 @@ public:
         boost::optional<Matrix&> H4 = boost::none,
         boost::optional<Matrix&> H5 = boost::none) const {
     if(H1) {
-      *H1 = Matrix_(1,1, 1.0);
-      *H2 = Matrix_(1,1, 2.0);
-      *H3 = Matrix_(1,1, 3.0);
-      *H4 = Matrix_(1,1, 4.0);
-      *H5 = Matrix_(1,1, 5.0);
+      *H1 = (Matrix(1, 1) << 1.0).finished();
+      *H2 = (Matrix(1, 1) << 2.0).finished();
+      *H3 = (Matrix(1, 1) << 3.0).finished();
+      *H4 = (Matrix(1, 1) << 4.0).finished();
+      *H5 = (Matrix(1, 1) << 5.0).finished();
     }
     return (Vector(1) << x1 + x2 + x3 + x4 + x5).finished();
   }
@@ -313,33 +309,32 @@ public:
 TEST(NonlinearFactor, NoiseModelFactor5) {
   TestFactor5 tf;
   Values tv;
-  tv.insert(X(1), LieVector(1, 1.0));
-  tv.insert(X(2), LieVector(1, 2.0));
-  tv.insert(X(3), LieVector(1, 3.0));
-  tv.insert(X(4), LieVector(1, 4.0));
-  tv.insert(X(5), LieVector(1, 5.0));
-  EXPECT(assert_equal(Vector_(1, 15.0), tf.unwhitenedError(tv)));
+  tv.insert(X(1), double((1.0)));
+  tv.insert(X(2), double((2.0)));
+  tv.insert(X(3), double((3.0)));
+  tv.insert(X(4), double((4.0)));
+  tv.insert(X(5), double((5.0)));
+  EXPECT(assert_equal((Vector(1) << 15.0).finished(), tf.unwhitenedError(tv)));
   DOUBLES_EQUAL(56.25/2.0, tf.error(tv), 1e-9);
-  Ordering ordering; ordering += X(1), X(2), X(3), X(4), X(5);
-  JacobianFactor jf(*boost::dynamic_pointer_cast<JacobianFactor>(tf.linearize(tv, ordering)));
-  LONGS_EQUAL(jf.keys()[0], 0);
-  LONGS_EQUAL(jf.keys()[1], 1);
-  LONGS_EQUAL(jf.keys()[2], 2);
-  LONGS_EQUAL(jf.keys()[3], 3);
-  LONGS_EQUAL(jf.keys()[4], 4);
-  EXPECT(assert_equal(Matrix_(1,1, 0.5), jf.getA(jf.begin())));
-  EXPECT(assert_equal(Matrix_(1,1, 1.0), jf.getA(jf.begin()+1)));
-  EXPECT(assert_equal(Matrix_(1,1, 1.5), jf.getA(jf.begin()+2)));
-  EXPECT(assert_equal(Matrix_(1,1, 2.0), jf.getA(jf.begin()+3)));
-  EXPECT(assert_equal(Matrix_(1,1, 2.5), jf.getA(jf.begin()+4)));
-  EXPECT(assert_equal(Vector_(1, -7.5), jf.getb()));
+  JacobianFactor jf(*boost::dynamic_pointer_cast<JacobianFactor>(tf.linearize(tv)));
+  LONGS_EQUAL((long)X(1), (long)jf.keys()[0]);
+  LONGS_EQUAL((long)X(2), (long)jf.keys()[1]);
+  LONGS_EQUAL((long)X(3), (long)jf.keys()[2]);
+  LONGS_EQUAL((long)X(4), (long)jf.keys()[3]);
+  LONGS_EQUAL((long)X(5), (long)jf.keys()[4]);
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 0.5).finished(), jf.getA(jf.begin())));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 1.0).finished(), jf.getA(jf.begin()+1)));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 1.5).finished(), jf.getA(jf.begin()+2)));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 2.0).finished(), jf.getA(jf.begin()+3)));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 2.5).finished(), jf.getA(jf.begin()+4)));
+  EXPECT(assert_equal((Vector)(Vector(1) << -7.5).finished(), jf.getb()));
 }
 
 /* ************************************************************************* */
-class TestFactor6 : public NoiseModelFactor6<LieVector, LieVector, LieVector, LieVector, LieVector, LieVector> {
+class TestFactor6 : public NoiseModelFactor6<double, double, double, double, double, double> {
 public:
-  typedef NoiseModelFactor6<LieVector, LieVector, LieVector, LieVector, LieVector, LieVector> Base;
-  TestFactor6() : Base(noiseModel::Diagonal::Sigmas(Vector_(1, 2.0)), X(1), X(2), X(3), X(4), X(5), X(6)) {}
+  typedef NoiseModelFactor6<double, double, double, double, double, double> Base;
+  TestFactor6() : Base(noiseModel::Diagonal::Sigmas((Vector(1) << 2.0).finished()), X(1), X(2), X(3), X(4), X(5), X(6)) {}
 
   virtual Vector
     evaluateError(const X1& x1, const X2& x2, const X3& x3, const X4& x4, const X5& x5, const X6& x6,
@@ -350,12 +345,12 @@ public:
         boost::optional<Matrix&> H5 = boost::none,
         boost::optional<Matrix&> H6 = boost::none) const {
     if(H1) {
-      *H1 = Matrix_(1,1, 1.0);
-      *H2 = Matrix_(1,1, 2.0);
-      *H3 = Matrix_(1,1, 3.0);
-      *H4 = Matrix_(1,1, 4.0);
-      *H5 = Matrix_(1,1, 5.0);
-      *H6 = Matrix_(1,1, 6.0);
+      *H1 = (Matrix(1, 1) << 1.0).finished();
+      *H2 = (Matrix(1, 1) << 2.0).finished();
+      *H3 = (Matrix(1, 1) << 3.0).finished();
+      *H4 = (Matrix(1, 1) << 4.0).finished();
+      *H5 = (Matrix(1, 1) << 5.0).finished();
+      *H6 = (Matrix(1, 1) << 6.0).finished();
     }
     return (Vector(1) << x1 + x2 + x3 + x4 + x5 + x6).finished();
   }
@@ -366,40 +361,39 @@ public:
 TEST(NonlinearFactor, NoiseModelFactor6) {
   TestFactor6 tf;
   Values tv;
-  tv.insert(X(1), LieVector(1, 1.0));
-  tv.insert(X(2), LieVector(1, 2.0));
-  tv.insert(X(3), LieVector(1, 3.0));
-  tv.insert(X(4), LieVector(1, 4.0));
-  tv.insert(X(5), LieVector(1, 5.0));
-  tv.insert(X(6), LieVector(1, 6.0));
-  EXPECT(assert_equal(Vector_(1, 21.0), tf.unwhitenedError(tv)));
+  tv.insert(X(1), double((1.0)));
+  tv.insert(X(2), double((2.0)));
+  tv.insert(X(3), double((3.0)));
+  tv.insert(X(4), double((4.0)));
+  tv.insert(X(5), double((5.0)));
+  tv.insert(X(6), double((6.0)));
+  EXPECT(assert_equal((Vector(1) << 21.0).finished(), tf.unwhitenedError(tv)));
   DOUBLES_EQUAL(110.25/2.0, tf.error(tv), 1e-9);
-  Ordering ordering; ordering += X(1), X(2), X(3), X(4), X(5), X(6);
-  JacobianFactor jf(*boost::dynamic_pointer_cast<JacobianFactor>(tf.linearize(tv, ordering)));
-  LONGS_EQUAL(jf.keys()[0], 0);
-  LONGS_EQUAL(jf.keys()[1], 1);
-  LONGS_EQUAL(jf.keys()[2], 2);
-  LONGS_EQUAL(jf.keys()[3], 3);
-  LONGS_EQUAL(jf.keys()[4], 4);
-  LONGS_EQUAL(jf.keys()[5], 5);
-  EXPECT(assert_equal(Matrix_(1,1, 0.5), jf.getA(jf.begin())));
-  EXPECT(assert_equal(Matrix_(1,1, 1.0), jf.getA(jf.begin()+1)));
-  EXPECT(assert_equal(Matrix_(1,1, 1.5), jf.getA(jf.begin()+2)));
-  EXPECT(assert_equal(Matrix_(1,1, 2.0), jf.getA(jf.begin()+3)));
-  EXPECT(assert_equal(Matrix_(1,1, 2.5), jf.getA(jf.begin()+4)));
-  EXPECT(assert_equal(Matrix_(1,1, 3.0), jf.getA(jf.begin()+5)));
-  EXPECT(assert_equal(Vector_(1, -10.5), jf.getb()));
+  JacobianFactor jf(*boost::dynamic_pointer_cast<JacobianFactor>(tf.linearize(tv)));
+  LONGS_EQUAL((long)X(1), (long)jf.keys()[0]);
+  LONGS_EQUAL((long)X(2), (long)jf.keys()[1]);
+  LONGS_EQUAL((long)X(3), (long)jf.keys()[2]);
+  LONGS_EQUAL((long)X(4), (long)jf.keys()[3]);
+  LONGS_EQUAL((long)X(5), (long)jf.keys()[4]);
+  LONGS_EQUAL((long)X(6), (long)jf.keys()[5]);
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 0.5).finished(), jf.getA(jf.begin())));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 1.0).finished(), jf.getA(jf.begin()+1)));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 1.5).finished(), jf.getA(jf.begin()+2)));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 2.0).finished(), jf.getA(jf.begin()+3)));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 2.5).finished(), jf.getA(jf.begin()+4)));
+  EXPECT(assert_equal((Matrix)(Matrix(1, 1) << 3.0).finished(), jf.getA(jf.begin()+5)));
+  EXPECT(assert_equal((Vector)(Vector(1) << -10.5).finished(), jf.getb()));
 
 }
 
 /* ************************************************************************* */
 TEST( NonlinearFactor, clone_rekey )
 {
-	shared_nlf init(new TestFactor4());
-  EXPECT_LONGS_EQUAL(X(1), init->keys()[0]);
-  EXPECT_LONGS_EQUAL(X(2), init->keys()[1]);
-  EXPECT_LONGS_EQUAL(X(3), init->keys()[2]);
-  EXPECT_LONGS_EQUAL(X(4), init->keys()[3]);
+  shared_nlf init(new TestFactor4());
+  EXPECT_LONGS_EQUAL((long)X(1), (long)init->keys()[0]);
+  EXPECT_LONGS_EQUAL((long)X(2), (long)init->keys()[1]);
+  EXPECT_LONGS_EQUAL((long)X(3), (long)init->keys()[2]);
+  EXPECT_LONGS_EQUAL((long)X(4), (long)init->keys()[3]);
 
   // Standard clone
   shared_nlf actClone = init->clone();
@@ -416,16 +410,16 @@ TEST( NonlinearFactor, clone_rekey )
   EXPECT(actRekey.get() != init.get()); // Ensure different pointers
 
   // Ensure init is unchanged
-  EXPECT_LONGS_EQUAL(X(1), init->keys()[0]);
-  EXPECT_LONGS_EQUAL(X(2), init->keys()[1]);
-  EXPECT_LONGS_EQUAL(X(3), init->keys()[2]);
-  EXPECT_LONGS_EQUAL(X(4), init->keys()[3]);
+  EXPECT_LONGS_EQUAL((long)X(1), (long)init->keys()[0]);
+  EXPECT_LONGS_EQUAL((long)X(2), (long)init->keys()[1]);
+  EXPECT_LONGS_EQUAL((long)X(3), (long)init->keys()[2]);
+  EXPECT_LONGS_EQUAL((long)X(4), (long)init->keys()[3]);
 
   // Check new keys
-  EXPECT_LONGS_EQUAL(X(5), actRekey->keys()[0]);
-  EXPECT_LONGS_EQUAL(X(6), actRekey->keys()[1]);
-  EXPECT_LONGS_EQUAL(X(7), actRekey->keys()[2]);
-  EXPECT_LONGS_EQUAL(X(8), actRekey->keys()[3]);
+  EXPECT_LONGS_EQUAL((long)X(5), (long)actRekey->keys()[0]);
+  EXPECT_LONGS_EQUAL((long)X(6), (long)actRekey->keys()[1]);
+  EXPECT_LONGS_EQUAL((long)X(7), (long)actRekey->keys()[2]);
+  EXPECT_LONGS_EQUAL((long)X(8), (long)actRekey->keys()[3]);
 }
 
 /* ************************************************************************* */

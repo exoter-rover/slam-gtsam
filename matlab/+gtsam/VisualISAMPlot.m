@@ -2,6 +2,7 @@ function VisualISAMPlot(truth, data, isam, result, options)
 % VisualISAMPlot plots current state of ISAM2 object
 % Authors: Duy Nguyen Ta and Frank Dellaert
 
+import gtsam.*
 h=gca;
 cla(h);
 hold on;
@@ -12,11 +13,10 @@ marginals = Marginals(isam.getFactorsUnsafe(), isam.calculateEstimate()); % TODO
 gtsam.plot3DPoints(result, [], marginals);
 
 %% Plot cameras
-import gtsam.*
 M = 1;
 while result.exists(symbol('x',M))
     ii = symbol('x',M);
-    pose_i = result.at(ii);
+    pose_i = result.atPose3(ii);
     if options.hardConstraint && (M==1)
         gtsam.plotPose3(pose_i,[],10);
     else

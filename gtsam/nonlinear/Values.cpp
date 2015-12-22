@@ -23,11 +23,19 @@
  */
 
 #include <gtsam/nonlinear/Values.h>
+#include <gtsam/linear/VectorValues.h>
 
 #include <list>
 
 #include <boost/foreach.hpp>
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#endif
 #include <boost/bind.hpp>
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 #include <boost/iterator/transform_iterator.hpp>
 
 using namespace std;
@@ -50,18 +58,19 @@ namespace gtsam {
 
   /* ************************************************************************* */
   bool Values::equals(const Values& other, double tol) const {
-    if(this->size() != other.size())
+    if (this->size() != other.size())
       return false;
-    for(const_iterator it1=this->begin(), it2=other.begin(); it1!=this->end(); ++it1, ++it2) {
-      if(typeid(it1->value) != typeid(it2->value))
+    for (const_iterator it1 = this->begin(), it2 = other.begin();
+        it1 != this->end(); ++it1, ++it2) {
+      const Value& value1 = it1->value;
+      const Value& value2 = it2->value;
+      if (typeid(value1) != typeid(value2) || it1->key != it2->key
+          || !value1.equals_(value2, tol)) {
         return false;
-      if(it1->key != it2->key)
-        return false;
-      if(!it1->value.equals_(it2->value, tol))
-        return false;
+      }
     }
     return true; // We return false earlier if we find anything that does not match
-  }
+}
 
   /* ************************************************************************* */
   bool Values::exists(Key j) const {
@@ -69,48 +78,55 @@ namespace gtsam {
   }
 
   /* ************************************************************************* */
-  VectorValues Values::zeroVectors(const Ordering& ordering) const {
-    return VectorValues::Zero(this->dims(ordering));
-  }
-
-  /* ************************************************************************* */
-  Values Values::retract(const VectorValues& delta, const Ordering& ordering) const {
+  Values Values::retract(const VectorValues& delta) const
+  {
     Values result;
 
     for(const_iterator key_value = begin(); key_value != end(); ++key_value) {
-      const SubVector& singleDelta = delta[ordering[key_value->key]]; // Delta for this value
+      VectorValues::const_iterator vector_item = delta.find(key_value->key);
       Key key = key_value->key;  // Non-const duplicate to deal with non-const insert argument
-      Value* retractedValue(key_value->value.retract_(singleDelta)); // Retract
-      result.values_.insert(key, retractedValue); // Add retracted result directly to result values
+      if(vector_item != delta.end()) {
+        const Vector& singleDelta = vector_item->second;
+        Value* retractedValue(key_value->value.retract_(singleDelta)); // Retract
+        result.values_.insert(key, retractedValue); // Add retracted result directly to result values
+      } else {
+        result.values_.insert(key, key_value->value.clone_()); // Add original version to result values
+      }
     }
 
     return result;
   }
 
   /* ************************************************************************* */
-  VectorValues Values::localCoordinates(const Values& cp, const Ordering& ordering) const {
-    VectorValues result(this->dims(ordering));
+  VectorValues Values::localCoordinates(const Values& cp) const {
     if(this->size() != cp.size())
       throw DynamicValuesMismatched();
+    VectorValues result;
     for(const_iterator it1=this->begin(), it2=cp.begin(); it1!=this->end(); ++it1, ++it2) {
       if(it1->key != it2->key)
         throw DynamicValuesMismatched(); // If keys do not match
       // Will throw a dynamic_cast exception if types do not match
       // NOTE: this is separate from localCoordinates(cp, ordering, result) due to at() vs. insert
-      result.at(ordering[it1->key]) = it1->value.localCoordinates_(it2->value);
+      result.insert(it1->key, it1->value.localCoordinates_(it2->value));
     }
     return result;
   }
 
   /* ************************************************************************* */
-  void Values::localCoordinates(const Values& cp, const Ordering& ordering, VectorValues& result) const {
-    if(this->size() != cp.size())
-      throw DynamicValuesMismatched();
-    for(const_iterator it1=this->begin(), it2=cp.begin(); it1!=this->end(); ++it1, ++it2) {
-      if(it1->key != it2->key)
-        throw DynamicValuesMismatched(); // If keys do not match
-      // Will throw a dynamic_cast exception if types do not match
-      result.insert(ordering[it1->key], it1->value.localCoordinates_(it2->value));
+  Vector Values::atFixed(Key j,  size_t n) {
+    switch (n) {
+    case 1: return at<Vector1>(j);
+    case 2: return at<Vector2>(j);
+    case 3: return at<Vector3>(j);
+    case 4: return at<Vector4>(j);
+    case 5: return at<Vector5>(j);
+    case 6: return at<Vector6>(j);
+    case 7: return at<Vector7>(j);
+    case 8: return at<Vector8>(j);
+    case 9: return at<Vector9>(j);
+    default:
+      throw runtime_error(
+          "Values::at fixed size can only handle n in 1..9");
     }
   }
 
@@ -127,10 +143,27 @@ namespace gtsam {
 
   /* ************************************************************************* */
   void Values::insert(Key j, const Value& val) {
-  	Key key = j; // Non-const duplicate to deal with non-const insert argument
-  	std::pair<KeyValueMap::iterator,bool> insertResult = values_.insert(key, val.clone_());
-  	if(!insertResult.second)
-  		throw ValuesKeyAlreadyExists(j);
+    std::pair<iterator,bool> insertResult = tryInsert(j, val);
+    if(!insertResult.second)
+      throw ValuesKeyAlreadyExists(j);
+  }
+
+  /* ************************************************************************* */
+  void Values::insertFixed(Key j, const Vector& v, size_t n) {
+    switch (n) {
+    case 1: insert<Vector1>(j,v); break;
+    case 2: insert<Vector2>(j,v); break;
+    case 3: insert<Vector3>(j,v); break;
+    case 4: insert<Vector4>(j,v); break;
+    case 5: insert<Vector5>(j,v); break;
+    case 6: insert<Vector6>(j,v); break;
+    case 7: insert<Vector7>(j,v); break;
+    case 8: insert<Vector8>(j,v); break;
+    case 9: insert<Vector9>(j,v); break;
+    default:
+      throw runtime_error(
+          "Values::insert fixed size can only handle n in 1..9");
+    }
   }
 
   /* ************************************************************************* */
@@ -142,17 +175,24 @@ namespace gtsam {
   }
 
   /* ************************************************************************* */
+  std::pair<Values::iterator, bool> Values::tryInsert(Key j, const Value& value) {
+    std::pair<KeyValueMap::iterator, bool> result = values_.insert(j, value.clone_());
+    return std::make_pair(boost::make_transform_iterator(result.first, &make_deref_pair), result.second);
+  }
+
+  /* ************************************************************************* */
   void Values::update(Key j, const Value& val) {
-  	// Find the value to update
-  	KeyValueMap::iterator item = values_.find(j);
-  	if(item == values_.end())
-  		throw ValuesKeyDoesNotExist("update", j);
+    // Find the value to update
+    KeyValueMap::iterator item = values_.find(j);
+    if (item == values_.end())
+      throw ValuesKeyDoesNotExist("update", j);
 
-  	// Cast to the derived type
-  	if(typeid(*item->second) != typeid(val))
-  		throw ValuesIncorrectType(j, typeid(*item->second), typeid(val));
+    // Cast to the derived type
+    const Value& old_value = *item->second;
+    if (typeid(old_value) != typeid(val))
+      throw ValuesIncorrectType(j, typeid(old_value), typeid(val));
 
-  	values_.replace(item, val.clone_());
+    values_.replace(item, val.clone_());
   }
 
   /* ************************************************************************* */
@@ -171,8 +211,9 @@ namespace gtsam {
   }
 
   /* ************************************************************************* */
-  FastList<Key> Values::keys() const {
-    FastList<Key> result;
+  KeyVector Values::keys() const {
+    KeyVector result;
+    result.reserve(size());
     for(const_iterator key_value = begin(); key_value != end(); ++key_value)
       result.push_back(key_value->key);
     return result;
@@ -186,15 +227,6 @@ namespace gtsam {
   }
 
   /* ************************************************************************* */
-  vector<size_t> Values::dims(const Ordering& ordering) const {
-    vector<size_t> result(values_.size());
-    BOOST_FOREACH(const ConstKeyValuePair& key_value, *this) {
-      result[ordering[key_value.key]] = key_value.value.dim();
-    }
-    return result;
-  }
-
-  /* ************************************************************************* */
   size_t Values::dim() const {
     size_t result = 0;
     BOOST_FOREACH(const ConstKeyValuePair& key_value, *this) {
@@ -204,12 +236,11 @@ namespace gtsam {
   }
 
   /* ************************************************************************* */
-  Ordering::shared_ptr Values::orderingArbitrary(Index firstVar) const {
-    Ordering::shared_ptr ordering(new Ordering);
-    for(const_iterator key_value = begin(); key_value != end(); ++key_value) {
-      ordering->insert(key_value->key, firstVar++);
-    }
-    return ordering;
+  VectorValues Values::zeroVectors() const {
+    VectorValues result;
+    BOOST_FOREACH(const ConstKeyValuePair& key_value, *this)
+      result.insert(key_value.key, Vector::Zero(key_value.value.dim()));
+    return result;
   }
 
   /* ************************************************************************* */

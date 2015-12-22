@@ -11,49 +11,24 @@
 
 /**
  * @file GaussianJunctionTree.cpp
- * @date Jul 12, 2010
- * @author Kai Ni
+ * @date Mar 29, 2013
  * @author Frank Dellaert
- * @brief: the Gaussian junction tree
+ * @author Richard Roberts
  */
 
-#include <gtsam/inference/ClusterTree.h>
-#include <gtsam/inference/JunctionTree.h>
+#include <gtsam/inference/JunctionTree-inst.h>
 #include <gtsam/linear/GaussianJunctionTree.h>
-#include <gtsam/linear/GaussianBayesTree.h>
-
-#include <vector>
-
-#include <boost/foreach.hpp>
+#include <gtsam/linear/GaussianEliminationTree.h>
 
 namespace gtsam {
 
-  // explicit template instantiation
-  template class JunctionTree<GaussianFactorGraph>;
-  template class ClusterTree<GaussianFactorGraph>;
+  // Instantiate base classes
+  template class ClusterTree<GaussianBayesTree, GaussianFactorGraph>;
+  template class JunctionTree<GaussianBayesTree, GaussianFactorGraph>;
 
-	using namespace std;
+  /* ************************************************************************* */
+  GaussianJunctionTree::GaussianJunctionTree(
+    const GaussianEliminationTree& eliminationTree) :
+  Base(eliminationTree) {}
 
-	/* ************************************************************************* */
-	VectorValues GaussianJunctionTree::optimize(Eliminate function) const {
-	  tic(1, "GJT eliminate");
-		// eliminate from leaves to the root
-		BTClique::shared_ptr rootClique(this->eliminate(function));
-    toc(1, "GJT eliminate");
-
-		// Allocate solution vector and copy RHS
-    tic(2, "allocate VectorValues");
-    vector<size_t> dims(rootClique->conditional()->back()+1, 0);
-		countDims(rootClique, dims);
-		VectorValues result(dims);
-    toc(2, "allocate VectorValues");
-
-		// back-substitution
-    tic(3, "back-substitute");
-		internal::optimizeInPlace<GaussianBayesTree>(rootClique, result);
-    toc(3, "back-substitute");
-		return result;
-	}
-
-	/* ************************************************************************* */
-} //namespace gtsam
+}

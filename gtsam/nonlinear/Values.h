@@ -24,20 +24,21 @@
 
 #pragma once
 
-#include <gtsam/base/Value.h>
-#include <gtsam/base/FastMap.h>
-#include <gtsam/linear/VectorValues.h>
-#include <gtsam/nonlinear/Key.h>
-#include <gtsam/nonlinear/Ordering.h>
-
-#include <boost/pool/pool_alloc.hpp>
-#include <boost/ptr_container/ptr_map.hpp>
+#include <gtsam/base/GenericValue.h>
+#include <gtsam/base/VectorSpace.h>
+#include <gtsam/inference/Key.h>
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/iterator/filter_iterator.hpp>
-#include <boost/function.hpp>
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-local-typedef"
+#endif
 #include <boost/bind.hpp>
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 #include <boost/ptr_container/serialize_ptr_map.hpp>
-#include <boost/iterator_adaptors.hpp>
 
 #include <string>
 #include <utility>
@@ -45,9 +46,17 @@
 namespace gtsam {
 
   // Forward declarations / utilities
-  class ValueCloneAllocator;
+  class VectorValues;
   class ValueAutomaticCasting;
   template<typename T> static bool _truePredicate(const T&) { return true; }
+
+  /* ************************************************************************* */
+  class GTSAM_EXPORT ValueCloneAllocator {
+  public:
+    static Value* allocate_clone(const Value& a) { return a.clone_(); }
+    static void deallocate_clone(const Value* a) { a->deallocate_(); }
+    ValueCloneAllocator() {}
+  };
 
   /**
   * A non-templated config holding any types of Manifold-group elements.  A
@@ -58,7 +67,7 @@ namespace gtsam {
   * manifold element, and hence supports operations dim, retract, and
   * localCoordinates.
   */
-  class Values {
+  class GTSAM_EXPORT Values {
 
   private:
 
@@ -89,7 +98,7 @@ namespace gtsam {
     typedef boost::shared_ptr<const Values> const_shared_ptr;
 
     /// A key-value pair, which you get by dereferencing iterators
-    struct KeyValuePair {
+    struct GTSAM_EXPORT KeyValuePair {
       const Key key; ///< The key
       Value& value;  ///< The value
 
@@ -97,7 +106,7 @@ namespace gtsam {
     };
 
     /// A key-value pair, which you get by dereferencing iterators
-    struct ConstKeyValuePair {
+    struct GTSAM_EXPORT ConstKeyValuePair {
       const Key key; ///< The key
       const Value& value;  ///< The value
 
@@ -166,6 +175,13 @@ namespace gtsam {
     template<typename ValueType>
     const ValueType& at(Key j) const;
 
+    /// Special version for small fixed size vectors, for matlab/python
+    /// throws truntime error if n<1 || n>9
+    Vector atFixed(Key j, size_t n);
+
+    /// version for double
+    double atDouble(size_t key) const { return at<double>(key);}
+
     /** Retrieve a variable by key \c j.  This version returns a reference
      * to the base Value class, and needs to be casted before use.
      * @param j Retrieve the value associated with this key
@@ -185,14 +201,31 @@ namespace gtsam {
     template<typename ValueType>
     boost::optional<const ValueType&> exists(Key j) const;
 
+    /** Find an element by key, returning an iterator, or end() if the key was
+     * not found. */
+    iterator find(Key j) { return boost::make_transform_iterator(values_.find(j), &make_deref_pair); }
+
+    /** Find an element by key, returning an iterator, or end() if the key was
+     * not found. */
+    const_iterator find(Key j) const { return boost::make_transform_iterator(values_.find(j), &make_const_deref_pair); }
+
+    /** Find the element greater than or equal to the specified key. */
+    iterator lower_bound(Key j) { return boost::make_transform_iterator(values_.lower_bound(j), &make_deref_pair); }
+
+    /** Find the element greater than or equal to the specified key. */
+    const_iterator lower_bound(Key j) const { return boost::make_transform_iterator(values_.lower_bound(j), &make_const_deref_pair); }
+
+    /** Find the lowest-ordered element greater than the specified key. */
+    iterator upper_bound(Key j) { return boost::make_transform_iterator(values_.upper_bound(j), &make_deref_pair); }
+
+    /** Find the lowest-ordered element greater than the specified key. */
+    const_iterator upper_bound(Key j) const { return boost::make_transform_iterator(values_.upper_bound(j), &make_const_deref_pair); }
+
     /** The number of variables in this config */
     size_t size() const { return values_.size(); }
 
     /** whether the config is empty */
     bool empty() const { return values_.empty(); }
-
-    /** Get a zero VectorValues of the correct structure */
-    VectorValues zeroVectors(const Ordering& ordering) const;
 
     const_iterator begin() const { return boost::make_transform_iterator(values_.begin(), &make_const_deref_pair); }
     const_iterator end() const { return boost::make_transform_iterator(values_.end(), &make_const_deref_pair); }
@@ -207,13 +240,10 @@ namespace gtsam {
     /// @{
 
     /** Add a delta config to current config and returns a new config */
-    Values retract(const VectorValues& delta, const Ordering& ordering) const;
+    Values retract(const VectorValues& delta) const;
 
     /** Get a delta config about a linearization point c0 (*this) */
-    VectorValues localCoordinates(const Values& cp, const Ordering& ordering) const;
-
-    /** Get a delta config about a linearization point c0 (*this) - assumes uninitialized delta */
-    void localCoordinates(const Values& cp, const Ordering& ordering, VectorValues& delta) const;
+    VectorValues localCoordinates(const Values& cp) const;
 
     ///@}
 
@@ -223,8 +253,34 @@ namespace gtsam {
     /** Add a set of variables, throws KeyAlreadyExists<J> if a key is already present */
     void insert(const Values& values);
 
+    /** Templated version to add a variable with the given j,
+     * throws KeyAlreadyExists<J> if j is already present
+     */
+    template <typename ValueType>
+    void insert(Key j, const ValueType& val);
+
+    /// Special version for small fixed size vectors, for matlab/python
+    /// throws truntime error if n<1 || n>9
+    void insertFixed(Key j, const Vector& v, size_t n);
+
+    /// version for double
+    void insertDouble(Key j, double c) { insert<double>(j,c); }
+
+    /** insert that mimics the STL map insert - if the value already exists, the map is not modified
+     *  and an iterator to the existing value is returned, along with 'false'.  If the value did not
+     *  exist, it is inserted and an iterator pointing to the new element, along with 'true', is
+     *  returned. */
+    std::pair<iterator, bool> tryInsert(Key j, const Value& value);
+
     /** single element change of existing element */
     void update(Key j, const Value& val);
+
+    /** Templated version to update a variable with the given j,
+      * throws KeyAlreadyExists<J> if j is already present
+      * if no chart is specified, the DefaultChart<ValueType> is used
+      */
+    template <typename T>
+    void update(Key j, const T& val);
 
     /** update the current available values without adding new ones */
     void update(const Values& values);
@@ -236,7 +292,7 @@ namespace gtsam {
      * Returns a set of keys in the config
      * Note: by construction, the list is ordered
      */
-    KeyList keys() const;
+    KeyVector keys() const;
 
     /** Replace all keys and variables */
     Values& operator=(const Values& rhs);
@@ -247,19 +303,11 @@ namespace gtsam {
     /** Remove all variables from the config */
     void clear() { values_.clear(); }
 
-    /** Create an array of variable dimensions using the given ordering (\f$ O(n) \f$) */
-    std::vector<size_t> dims(const Ordering& ordering) const;
-
     /** Compute the total dimensionality of all values (\f$ O(n) \f$) */
     size_t dim() const;
 
-    /**
-     * Generate a default ordering, simply in key sort order.  To instead
-     * create a fill-reducing ordering, use
-     * NonlinearFactorGraph::orderingCOLAMD().  Alternatively, you may permute
-     * this ordering yourself (as orderingCOLAMD() does internally).
-     */
-    Ordering::shared_ptr orderingArbitrary(Index firstVar = 0) const;
+    /** Return a VectorValues of zero vectors for each variable in this Values */
+    VectorValues zeroVectors() const;
 
     /**
      * Return a filtered view of this Values class, without copying any data.
@@ -343,23 +391,17 @@ namespace gtsam {
     // supplied \c filter function.
     template<class ValueType>
     static bool filterHelper(const boost::function<bool(Key)> filter, const ConstKeyValuePair& key_value) {
+      BOOST_STATIC_ASSERT((!boost::is_same<ValueType, Value>::value));
       // Filter and check the type
-      return filter(key_value.key) && (typeid(ValueType) == typeid(key_value.value) || typeid(ValueType) == typeid(Value));
-    }
-
-    // Cast to the derived ValueType
-    template<class ValueType, class CastedKeyValuePairType, class KeyValuePairType>
-    static CastedKeyValuePairType castHelper(KeyValuePairType key_value) {
-      // Static cast because we already checked the type during filtering
-      return CastedKeyValuePairType(key_value.key, static_cast<ValueType&>(key_value.value));
+      return filter(key_value.key) && (dynamic_cast<const GenericValue<ValueType>*>(&key_value.value));
     }
 
     /** Serialization function */
-  	friend class boost::serialization::access;
-  	template<class ARCHIVE>
-  	void serialize(ARCHIVE & ar, const unsigned int version) {
-  		ar & BOOST_SERIALIZATION_NVP(values_);
-  	}
+    friend class boost::serialization::access;
+    template<class ARCHIVE>
+    void serialize(ARCHIVE & ar, const unsigned int /*version*/) {
+      ar & BOOST_SERIALIZATION_NVP(values_);
+    }
 
     static ConstKeyValuePair make_const_deref_pair(const KeyValueMap::const_iterator::value_type& key_value) {
       return ConstKeyValuePair(key_value.first, *key_value.second); }
@@ -370,7 +412,7 @@ namespace gtsam {
   };
 
   /* ************************************************************************* */
-  class ValuesKeyAlreadyExists : public std::exception {
+  class GTSAM_EXPORT ValuesKeyAlreadyExists : public std::exception {
   protected:
     const Key key_; ///< The key that already existed
 
@@ -392,7 +434,7 @@ namespace gtsam {
   };
 
   /* ************************************************************************* */
-  class ValuesKeyDoesNotExist : public std::exception {
+  class GTSAM_EXPORT ValuesKeyDoesNotExist : public std::exception {
   protected:
     const char* operation_; ///< The operation that attempted to access the key
     const Key key_; ///< The key that does not exist
@@ -415,7 +457,7 @@ namespace gtsam {
   };
 
   /* ************************************************************************* */
-  class ValuesIncorrectType : public std::exception {
+  class GTSAM_EXPORT ValuesIncorrectType : public std::exception {
   protected:
     const Key key_; ///< The key requested
     const std::type_info& storedTypeId_;
@@ -446,7 +488,7 @@ namespace gtsam {
   };
 
   /* ************************************************************************* */
-  class DynamicValuesMismatched : public std::exception {
+  class GTSAM_EXPORT DynamicValuesMismatched : public std::exception {
 
   public:
     DynamicValuesMismatched() throw() {}
@@ -458,6 +500,12 @@ namespace gtsam {
     }
   };
 
-}
+  /// traits
+  template<>
+  struct traits<Values> : public Testable<Values> {
+  };
+
+} //\ namespace gtsam
+
 
 #include <gtsam/nonlinear/Values-inl.h>
