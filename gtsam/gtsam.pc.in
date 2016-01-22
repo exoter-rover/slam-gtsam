@@ -4,9 +4,9 @@ libdir=${prefix}/lib
 includedir=${prefix}/include
 
 Name: gtsam
-Description: 
-Version:  0.1
+Description: @PROJECT_DESCRIPTION@
+Version: @PROJECT_VERSION@
 Requires: @PKGCONFIG_REQUIRES@
-Libs: -L${libdir} @PKGCONFIG_LIBS@
+Libs: -L${libdir} -lgtsam @PKGCONFIG_LIBS@
 Cflags: -I${includedir} @PKGCONFIG_CFLAGS@
 
